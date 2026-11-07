@@ -26,3 +26,6 @@ review_files/
 model_cache/
 models/
 *.pyc
+.k3-build/
+node_modules/
+*.inspect.ndjson

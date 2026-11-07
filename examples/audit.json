@@ -1,0 +1,16 @@
+{
+  "dataset_key": "sha256:a8449277b55912689f729fc43968a3ed4635fe68afab3a3f4c940ab76f20c3d2",
+  "total_rows": 30,
+  "unique_responses": 30,
+  "audience_totals": {
+    "Students": 10,
+    "School staff": 9,
+    "Known non-students": 20
+  },
+  "valid_intent": 29,
+  "zero_intent": 1,
+  "missing_intent": 1,
+  "comment_records": 60,
+  "reviewed_records": 20,
+  "pending_records": 40
+}

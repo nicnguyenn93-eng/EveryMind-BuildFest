@@ -1,0 +1,27 @@
+import fs from 'node:fs/promises';
+import { Workbook, SpreadsheetFile } from '@oai/artifact-tool';
+
+const rows = JSON.parse(await fs.readFile('examples/workbook_rows.json', 'utf8'));
+const workbook = Workbook.create();
+const sheet = workbook.worksheets.add('Survey Data');
+sheet.getRange('A1:N31').values = rows;
+sheet.showGridLines = false;
+sheet.getRange('A1:N31').format.font = {name: 'Arial', size: 10};
+sheet.getRange('A1:N1').format = {fill: '#243746', font: {name: 'Arial', color: '#FFFFFF', bold: true}, wrapText: true, rowHeight: 42};
+sheet.getRange('A2:N31').format.rowHeight = 46;
+sheet.getRange('A1:A31').format.columnWidth = 12;
+sheet.getRange('B1:C31').format.columnWidth = 24;
+sheet.getRange('D1:D31').format.columnWidth = 16;
+sheet.getRange('E1:K31').format.columnWidth = 17;
+sheet.getRange('L1:L31').format.columnWidth = 12;
+sheet.getRange('M1:N31').format.columnWidth = 52;
+sheet.getRange('B2:C31').format.wrapText = true;
+sheet.getRange('M2:N31').format.wrapText = true;
+sheet.getRange('E2:L31').setNumberFormat('0');
+sheet.freezePanes.freezeRows(1);
+sheet.freezePanes.freezeColumns(1);
+workbook.recalculate();
+console.log((await workbook.inspect({kind:'table', range:'Survey Data!A1:N4', tableMaxRows:4, tableMaxCols:15, maxChars:2000})).ndjson);
+const preview = await workbook.render({sheetName:'Survey Data',range:'A1:N5',scale:1,format:'png'});
+await fs.writeFile('.k3-build/preview.png', new Uint8Array(await preview.arrayBuffer()));
+await (await SpreadsheetFile.exportXlsx(workbook)).save('examples/synthetic_survey.xlsx');

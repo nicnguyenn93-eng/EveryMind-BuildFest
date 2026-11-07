@@ -1,0 +1,483 @@
+[
+  {
+    "id": "SYN001",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 2,
+    "q2_knowledge": 4,
+    "q3_knowledge": 2,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 0,
+    "intent": 0,
+    "role_membership": [
+      "Student",
+      "School staff"
+    ]
+  },
+  {
+    "id": "SYN002",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 2,
+    "q2_knowledge": 4,
+    "q3_knowledge": 2,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": null,
+    "role_membership": [
+      "Student"
+    ]
+  },
+  {
+    "id": "SYN003",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 2,
+    "q2_knowledge": 4,
+    "q3_knowledge": 2,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Student"
+    ]
+  },
+  {
+    "id": "SYN004",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 2,
+    "q2_knowledge": 4,
+    "q3_knowledge": 2,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Student"
+    ]
+  },
+  {
+    "id": "SYN005",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 2,
+    "q2_knowledge": 4,
+    "q3_knowledge": 2,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Student"
+    ]
+  },
+  {
+    "id": "SYN006",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Student"
+    ]
+  },
+  {
+    "id": "SYN007",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Student"
+    ]
+  },
+  {
+    "id": "SYN008",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Student"
+    ]
+  },
+  {
+    "id": "SYN009",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Student"
+    ]
+  },
+  {
+    "id": "SYN010",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 3,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Student"
+    ]
+  },
+  {
+    "id": "SYN011",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "School staff"
+    ]
+  },
+  {
+    "id": "SYN012",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "School staff"
+    ]
+  },
+  {
+    "id": "SYN013",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "School staff"
+    ]
+  },
+  {
+    "id": "SYN014",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "School staff"
+    ]
+  },
+  {
+    "id": "SYN015",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "School staff"
+    ]
+  },
+  {
+    "id": "SYN016",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "School staff"
+    ]
+  },
+  {
+    "id": "SYN017",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "School staff"
+    ]
+  },
+  {
+    "id": "SYN018",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "School staff"
+    ]
+  },
+  {
+    "id": "SYN019",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Community member"
+    ]
+  },
+  {
+    "id": "SYN020",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Community member"
+    ]
+  },
+  {
+    "id": "SYN021",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Community member"
+    ]
+  },
+  {
+    "id": "SYN022",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Community member"
+    ]
+  },
+  {
+    "id": "SYN023",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Community member"
+    ]
+  },
+  {
+    "id": "SYN024",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Community member"
+    ]
+  },
+  {
+    "id": "SYN025",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Community member"
+    ]
+  },
+  {
+    "id": "SYN026",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Community member"
+    ]
+  },
+  {
+    "id": "SYN027",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Community member"
+    ]
+  },
+  {
+    "id": "SYN028",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Community member"
+    ]
+  },
+  {
+    "id": "SYN029",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": 4,
+    "q4_knowledge": 4,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Community member"
+    ]
+  },
+  {
+    "id": "SYN030",
+    "county": "Synthetic County",
+    "training_date": "2026-11-01",
+    "q1_knowledge": 4,
+    "q2_knowledge": 4,
+    "q3_knowledge": null,
+    "q4_knowledge": 5,
+    "q5_knowledge": 3,
+    "q6_knowledge": 5,
+    "recommendation": 8,
+    "intent": 7,
+    "role_membership": [
+      "Community member"
+    ]
+  }
+]

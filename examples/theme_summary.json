@@ -1,0 +1,22 @@
+[
+  {
+    "dataset_key": "sha256:a8449277b55912689f729fc43968a3ed4635fe68afab3a3f4c940ab76f20c3d2",
+    "audience": "Students",
+    "source_field": "how_can_we_improve",
+    "theme_id": "THEME_SCENARIOS",
+    "eligible_nonblank": 10,
+    "reviewed_denominator": 10,
+    "theme_positive": 10,
+    "caveat": "Synthetic reviewed sample; ten students selected by fixed SYN001-SYN010 ID range. Not a population prevalence estimate."
+  },
+  {
+    "dataset_key": "sha256:a8449277b55912689f729fc43968a3ed4635fe68afab3a3f4c940ab76f20c3d2",
+    "audience": "All respondents",
+    "source_field": "how_can_we_improve",
+    "theme_id": "THEME_SCENARIOS",
+    "eligible_nonblank": 30,
+    "reviewed_denominator": 10,
+    "theme_positive": 10,
+    "caveat": "Synthetic reviewed sample; ten students selected by fixed SYN001-SYN010 ID range. Not a population prevalence estimate."
+  }
+]

@@ -36,8 +36,9 @@ Open the local URL printed by Streamlit (normally `http://localhost:8501`). Stop
 | `feedback.py`, `codebook.csv` | Reviewed feedback/search stub and empty codebook. |
 | `report.py`, `action_catalog.json`, `prompts/` | Report stub and draft action rules; validation, provider, and fallback remain. |
 | `export_pdf.py` | PDF generation stub. |
-| `schema.json` | Draft example records; reconcile with module interfaces before integration. |
-| `checks/` | Regression-test location; current test file is empty. |
+| `schema.json` | K3 v1 synthetic example records, consistent with `examples/`; production modules still need to adopt these contracts. |
+| `checks/` | K3 fixture consistency checks; production regression tests remain to be written. |
+| `examples/` | K3 synthetic CSV/XLSX inputs, expected output records, loader, and receiving-review checklist. See [K3 handoff](examples/README.md). |
 
 ## Updating and checking work
 
@@ -49,7 +50,7 @@ Run checks on Windows with:
 .\.venv\Scripts\python.exe -m pytest checks -q
 ```
 
-On macOS/Linux use `.venv/bin/python -m pytest checks -q`. Currently this reports `no tests ran` (pytest exit code 5); it is not a passing release check. Add synthetic fixtures and regression tests for the build playbook's original/updated-file calculations, audience scoping, privacy suppression, report validation, and offline behavior before release.
+On macOS/Linux use `.venv/bin/python -m pytest checks -q`. K3 checks verify the shared synthetic inputs and expected records, not production behavior. Add regression tests for the build playbook's original/updated-file calculations, audience scoping, privacy suppression, report validation, and offline behavior before release.
 
 ## Local data and secrets
 

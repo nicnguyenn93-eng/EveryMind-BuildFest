@@ -1,38 +1,49 @@
 {
+  "contract_version": "k3-v1",
+  "description": "Synthetic example records, not a JSON Schema validator. See examples/README.md.",
   "evidence_row_schema": {
-    "dataset_key": "E01",
+    "dataset_key": "sha256:a8449277b55912689f729fc43968a3ed4635fe68afab3a3f4c940ab76f20c3d2",
     "audience": "Students",
-    "evidence_id": "EV_988_POST_01",
-    "survey_question": "post-training agreement on explaining 988",
-    "metric_type": "retrospective_agreement",
-    "numerator_or_score_sum": 1175,
-    "valid_denominator": 1299,
-    "audience_total": 1299,
+    "evidence_id": "STUDENTS_EXPLAIN_988_BEFORE",
+    "survey_question": "Explain 988: recalled before agreement",
+    "metric_type": "paired_agreement",
+    "numerator_or_score_sum": 5,
+    "valid_denominator": 10,
+    "audience_total": 10,
     "unit": "percent",
-    "display_value": "90.5%",
-    "caveat": "none"
+    "display_value": "50.0%",
+    "caveat": "Retrospective self-report; limited sample (10-29 valid pairs)."
   },
   "reviewed_comment_schema": {
-    "private_record_key": "R_001",
-    "source_field": "Q12_text_comments",
-    "role_membership": "Student",
+    "private_record_key": "SYN001:most_valuable",
+    "response_id": "SYN001",
+    "source_field": "most_valuable",
+    "role_membership": [
+      "Student",
+      "School staff"
+    ],
     "language": "en",
-    "content_fingerprint": "a1b2c3d4",
+    "content_fingerprint": "01c00f8ce94a7f493eefabba825e2b58c9376ca86403e88fb63172d86f3c9091",
     "reviewer_status": "approved",
-    "approved_paraphrase": "Students felt the trainer was clear but wanted more interactive scenarios.",
-    "theme_ids": ["THEME_ENGAGEMENT", "THEME_PACE"]
+    "approved_paraphrase": "The explanation of 988 was clear.",
+    "theme_ids": [
+      "THEME_CLARITY"
+    ]
   },
   "report_schema": {
-    "dataset_key": "E01",
+    "dataset_key": "sha256:a8449277b55912689f729fc43968a3ed4635fe68afab3a3f4c940ab76f20c3d2",
     "audience": "Students",
-    "mode": "production",
+    "mode": "template",
     "summary_blocks": [
-      "Student confidence in explaining 988 met the 90% benchmark, but qualitative flags suggest engagement risks in hybrid cohorts."
+      "In this synthetic fixture, agreement on explaining 988 increased from 5/10 (50.0%) to 9/10 (90.0%) among paired student responses, a 40.0 percentage-point change."
     ],
-    "evidence_ids": ["EV_988_POST_01"],
+    "evidence_ids": [
+      "STUDENTS_EXPLAIN_988_BEFORE",
+      "STUDENTS_EXPLAIN_988_POST"
+    ],
     "proposed_action_id": "ACT_PILOT_ROLEPLAY",
     "staff_owner": "Training Lead",
-    "follow-up_measure": "Proportion of students completing the interactive roleplay scenario in the next cohort.",
-    "limitations": "Excludes 3 school districts due to missing post-survey completion criteria."
+    "follow_up_measure": "At the next two comparable sessions, record the proportion completing the practice-call checklist.",
+    "limitations": "Synthetic example only. Retrospective self-report, not causal evidence. Ten reviewed student improvement comments request scenarios; limited sample."
   }
 }
