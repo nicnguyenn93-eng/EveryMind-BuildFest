@@ -32,8 +32,9 @@ Open the local URL printed by Streamlit (normally `http://localhost:8501`). Stop
 |---|---|
 | `app.py` | Streamlit UI scaffold; backend imports are commented out. |
 | `clean.py`, `export_columns.json` | Actual-export XLSX/CSV import, text-score normalization, role membership, private comments, duplicate-ID rejection, and audit. Not yet connected to the UI; county alias mapping remains. |
-| `metrics.py` | Preliminary single-item calculation; paired metrics and full privacy rules remain. |
-| `feedback.py`, `codebook.csv` | Reviewed feedback/search stub and empty codebook. |
+| `analysis.py` | Descriptive paired knowledge statistics, recommendation/intent, coverage, group comparisons, and combined analysis JSON. See [analysis handoff](docs/analysis_handoff.md). |
+| `metrics.py` | Compatibility import for `analysis.build_evidence`. |
+| `feedback.py`, `codebook.json` | Local pending coding suggestions and fingerprint-matched, reviewed theme counts. Search and identifier screening remain separate work. |
 | `report.py`, `action_catalog.json`, `prompts/` | Report stub and draft action rules; validation, provider, and fallback remain. |
 | `export_pdf.py` | PDF generation stub. |
 | `schema.json` | K3 v2 export-compatible example records, consistent with `examples/`; downstream modules still need to adopt these contracts. |
@@ -59,7 +60,7 @@ Keep real survey exports in `uploads/` or `private_data/`, review sheets in `pri
 ## Next integration priorities
 
 1. Agree on consistent input, evidence, reviewed-comment, and report contracts.
-2. Complete import, paired calculations, audience membership, privacy checks, and content-based dataset identity.
+2. Integrate the tested import and analysis modules; finish county aliases and review privacy behavior across the app's outputs.
 3. Connect real evidence to the UI and invalidate reports on upload or audience changes.
 4. Implement reviewed local search, evidence-based action eligibility, report validation/fallback, and a real one-page PDF.
 5. Verify the live-provider path, clean-machine setup, and release checks before preparing final deliverables.
