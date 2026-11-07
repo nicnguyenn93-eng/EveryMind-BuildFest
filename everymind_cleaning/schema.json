@@ -1,0 +1,492 @@
+{
+  "_about": "Column contract for EveryMind 988 training survey exports. Edit synonyms here when the form wording changes; no code changes needed.",
+  "sheet": "Survey Data",
+  "columns": {
+    "response_id": {
+      "type": "id",
+      "required": true,
+      "synonyms": [
+        "id",
+        "response id",
+        "respondent id"
+      ],
+      "must_not_contain": [
+        "student"
+      ]
+    },
+    "student_id": {
+      "type": "drop",
+      "required": false,
+      "synonyms": [
+        "student id",
+        "student number",
+        "student no"
+      ]
+    },
+    "start_time": {
+      "type": "datetime",
+      "required": false,
+      "synonyms": [
+        "start time",
+        "started",
+        "start date"
+      ]
+    },
+    "completion_time": {
+      "type": "datetime",
+      "required": false,
+      "synonyms": [
+        "completion time",
+        "end time",
+        "submitted",
+        "submission time"
+      ]
+    },
+    "form_language": {
+      "type": "category",
+      "vocab": "form_language",
+      "required": false,
+      "synonyms": [
+        "language",
+        "form language"
+      ]
+    },
+    "role": {
+      "type": "multiselect",
+      "vocab": "role",
+      "required": true,
+      "synonyms": [
+        "are you a",
+        "role",
+        "which best describes you"
+      ]
+    },
+    "training_date": {
+      "type": "date",
+      "required": false,
+      "synonyms": [
+        "please enter the date of your training",
+        "training date",
+        "date of training",
+        "date of your training"
+      ]
+    },
+    "county": {
+      "type": "category",
+      "vocab": "county",
+      "required": false,
+      "synonyms": [
+        "which county is this training affiliated with",
+        "county",
+        "training county"
+      ]
+    },
+    "identify_after": {
+      "type": "likert5",
+      "required": true,
+      "synonyms": [
+        "please tell us how much you disagree or agree with the statements i can identify mental health challenges and crises"
+      ],
+      "must_contain": [
+        "identify"
+      ],
+      "must_not_contain": [
+        "before"
+      ]
+    },
+    "describe_after": {
+      "type": "likert5",
+      "required": true,
+      "synonyms": [
+        "please tell us how much you disagree or agree with the statements i can describe 988 and how it works"
+      ],
+      "must_contain": [
+        "988"
+      ],
+      "must_not_contain": [
+        "before",
+        "when"
+      ]
+    },
+    "when_after": {
+      "type": "likert5",
+      "required": true,
+      "synonyms": [
+        "please tell us how much you disagree or agree with the statements i know when to use 988"
+      ],
+      "must_contain": [
+        "988",
+        "when"
+      ],
+      "must_not_contain": [
+        "before"
+      ]
+    },
+    "identify_before": {
+      "type": "likert5",
+      "required": true,
+      "synonyms": [
+        "now think back to before you took part in the understanding 988 training i could identify mental health challenges and crises"
+      ],
+      "must_contain": [
+        "before",
+        "identify"
+      ]
+    },
+    "describe_before": {
+      "type": "likert5",
+      "required": true,
+      "synonyms": [
+        "now think back to before you took part in the understanding 988 training i could describe 988 and how it works"
+      ],
+      "must_contain": [
+        "before",
+        "988"
+      ],
+      "must_not_contain": [
+        "when"
+      ]
+    },
+    "when_before": {
+      "type": "likert5",
+      "required": true,
+      "synonyms": [
+        "now think back to before you took part in the understanding 988 training i knew when to use 988"
+      ],
+      "must_contain": [
+        "before",
+        "988",
+        "when"
+      ]
+    },
+    "presenter_engaged": {
+      "type": "likert5",
+      "required": false,
+      "versioned": true,
+      "synonyms": [
+        "how much do you agree or disagree with the following aspects of the training the presenter s engaged the participants"
+      ],
+      "must_contain": [
+        "engag"
+      ]
+    },
+    "presenter_knowledge": {
+      "type": "likert5",
+      "required": false,
+      "versioned": true,
+      "synonyms": [
+        "how much do you agree or disagree with the following aspects of the training the presenter s knew the subject matter well"
+      ],
+      "must_contain": [
+        "subject"
+      ]
+    },
+    "well_organized": {
+      "type": "likert5",
+      "required": false,
+      "versioned": true,
+      "synonyms": [
+        "how much do you agree or disagree with the following aspects of the training the training was well organized"
+      ],
+      "must_contain": [
+        "organiz"
+      ]
+    },
+    "recommend": {
+      "type": "scale",
+      "min": 0,
+      "max": 10,
+      "required": false,
+      "versioned": true,
+      "synonyms": [
+        "how likely are you to recommend the understanding 988 training to a friend or colleague"
+      ],
+      "must_contain": [
+        "recommend"
+      ]
+    },
+    "call_intent": {
+      "type": "scale",
+      "min": 0,
+      "max": 10,
+      "required": false,
+      "versioned": true,
+      "synonyms": [
+        "how likely are you to call 988 if you or someone else is experiencing a mental health challenge or crisis"
+      ],
+      "must_contain": [
+        "call"
+      ]
+    },
+    "most_valuable": {
+      "type": "text",
+      "required": false,
+      "synonyms": [
+        "what was the most valuable thing you learned during the training"
+      ],
+      "must_contain": [
+        "valuable"
+      ]
+    },
+    "improve": {
+      "type": "text",
+      "required": false,
+      "synonyms": [
+        "how can we improve this training in the future"
+      ],
+      "must_contain": [
+        "improve"
+      ]
+    }
+  },
+  "vocab": {
+    "likert5": {
+      "_note": "Fuzzy matching is OFF for Likert: 'strongly agree' vs 'strongly disagree' are ~90% similar strings. Unknown labels go to human review.",
+      "canonical": {
+        "Strongly disagree": 1,
+        "Disagree": 2,
+        "Neither agree nor disagree": 3,
+        "Agree": 4,
+        "Strongly agree": 5
+      },
+      "aliases": {
+        "Neither agree or disagree": "Neither agree nor disagree",
+        "Neutral": "Neither agree nor disagree",
+        "Neither disagree nor agree": "Neither agree nor disagree"
+      },
+      "declined": [
+        "N/A",
+        "NA",
+        "Not applicable",
+        "Prefer not to say",
+        "Prefer not to answer"
+      ],
+      "accept_numeric_codes": true,
+      "fuzzy_threshold": null
+    },
+    "role": {
+      "canonical": [
+        "Student",
+        "School staff member",
+        "Caregiver/parent",
+        "Other (e.g., community member)"
+      ],
+      "aliases": {
+        "Parent/caregiver": "Caregiver/parent",
+        "Parent": "Caregiver/parent",
+        "Caregiver": "Caregiver/parent",
+        "Community member": "Other (e.g., community member)",
+        "Other": "Other (e.g., community member)",
+        "School staff": "School staff member",
+        "Staff": "School staff member"
+      },
+      "slugs": {
+        "Student": "student",
+        "School staff member": "staff",
+        "Caregiver/parent": "caregiver",
+        "Other (e.g., community member)": "other"
+      },
+      "separators": [
+        ";"
+      ],
+      "fuzzy_threshold": 88
+    },
+    "county": {
+      "canonical": [
+        "Anne Arundel",
+        "Prince George's",
+        "Montgomery",
+        "Queen Anne's",
+        "Fairfax",
+        "Harris"
+      ],
+      "aliases": {
+        "PG": "Prince George's",
+        "PG County": "Prince George's",
+        "AA County": "Anne Arundel",
+        "MoCo": "Montgomery"
+      },
+      "strip_tokens": [
+        "county",
+        "co"
+      ],
+      "allow_contains": true,
+      "fuzzy_threshold": 85
+    },
+    "form_language": {
+      "canonical": {
+        "English": "en",
+        "Spanish": "es"
+      },
+      "aliases": {
+        "English (United States)": "English",
+        "Español (México)": "Spanish",
+        "Español": "Spanish",
+        "Espanol": "Spanish"
+      },
+      "allow_contains": true,
+      "fuzzy_threshold": null
+    }
+  },
+  "pairs": {
+    "identify": [
+      "identify_before",
+      "identify_after"
+    ],
+    "describe_988": [
+      "describe_before",
+      "describe_after"
+    ],
+    "when_988": [
+      "when_before",
+      "when_after"
+    ]
+  },
+  "agree_threshold": 4,
+  "duplicates": {
+    "exact": "drop",
+    "duplicate_id": "flag",
+    "same_content_different_id": "flag"
+  },
+  "versioning": {
+    "_about": "A blank in a session where almost nobody answered the question means the question was probably not on that form version.",
+    "session_keys": [
+      "training_date",
+      "county"
+    ],
+    "min_session_n": 5,
+    "not_asked_max_rate": 0.1,
+    "skipped_min_rate": 0.5
+  },
+  "dates": {
+    "max_gap_days": 60
+  },
+  "quality": {
+    "min_duration_seconds": 20,
+    "straightline_items": [
+      "identify_before",
+      "describe_before",
+      "when_before",
+      "identify_after",
+      "describe_after",
+      "when_after",
+      "presenter_engaged",
+      "presenter_knowledge",
+      "well_organized"
+    ],
+    "straightline_min_items": 9,
+    "misread": {
+      "post_items": [
+        "when_after"
+      ],
+      "post_value": 1,
+      "aspect_items": [
+        "presenter_engaged",
+        "presenter_knowledge",
+        "well_organized"
+      ],
+      "aspect_min_mean": 5.0,
+      "aspect_min_items": 2,
+      "_note": "Matches the team definition (n=10 on the original export). Broader variant: any post item = 1 with aspect mean >= 4 flags 17."
+    }
+  },
+  "text": {
+    "unclear_phrases": [
+      "idk",
+      "i dont know",
+      "i don t know",
+      "dont know",
+      "don t know",
+      "dunno",
+      "unsure",
+      "not sure",
+      "no idea",
+      "no se",
+      "no sé",
+      "nose",
+      "?",
+      "x",
+      "xx",
+      "xxx",
+      "asdf",
+      "hmm",
+      "um",
+      "uhh",
+      "ok",
+      "okay"
+    ],
+    "none_phrases": [
+      "nothing",
+      "none",
+      "no",
+      "nope",
+      "nah",
+      "n a",
+      "na",
+      "no comment",
+      "no comments",
+      "nothing really",
+      "nothing at all",
+      "all good",
+      "its good",
+      "it s good",
+      "it was good",
+      "it was great",
+      "good",
+      "great",
+      "fine",
+      "perfect",
+      "nothing to improve",
+      "no improvements",
+      "keep it the same",
+      "nada",
+      "ninguno",
+      "ninguna",
+      "todo bien",
+      "nothing it was good",
+      "nothing it was great",
+      "nothing its good",
+      "it was excellent",
+      "excellent",
+      "fue excelente",
+      "excelente",
+      "estuvo bien",
+      "estubo bien",
+      "todo excelente",
+      "todo estuvo bien"
+    ],
+    "distress_terms": [
+      "kill myself",
+      "killing myself",
+      "want to die",
+      "wanna die",
+      "end my life",
+      "take my life",
+      "i am suicidal",
+      "i m suicidal",
+      "im suicidal",
+      "i feel suicidal",
+      "hurt myself",
+      "hurting myself",
+      "cut myself",
+      "cutting myself",
+      "harm myself",
+      "no reason to live",
+      "better off dead",
+      "i am not okay",
+      "i m not okay",
+      "im not okay",
+      "quiero morir",
+      "matarme",
+      "suicidarme",
+      "hacerme daño",
+      "no quiero vivir",
+      "quitarme la vida"
+    ],
+    "privacy_canaries": [],
+    "meaningful_short_answers": [
+      "988"
+    ],
+    "_distress_note": "Tuned on the original export: 'i need help' removed because it matched '...call when I need help' (a learning outcome, not distress). High recall is intended; every hit goes to staff review only."
+  }
+}

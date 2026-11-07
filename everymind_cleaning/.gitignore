@@ -1,0 +1,6 @@
+data/
+private/
+outputs/
+.env
+__pycache__/
+.ipynb_checkpoints/
