@@ -1,0 +1,38 @@
+{
+  "evidence_row_schema": {
+    "dataset_key": "E01",
+    "audience": "Students",
+    "evidence_id": "EV_988_POST_01",
+    "survey_question": "post-training agreement on explaining 988",
+    "metric_type": "retrospective_agreement",
+    "numerator_or_score_sum": 1175,
+    "valid_denominator": 1299,
+    "audience_total": 1299,
+    "unit": "percent",
+    "display_value": "90.5%",
+    "caveat": "none"
+  },
+  "reviewed_comment_schema": {
+    "private_record_key": "R_001",
+    "source_field": "Q12_text_comments",
+    "role_membership": "Student",
+    "language": "en",
+    "content_fingerprint": "a1b2c3d4",
+    "reviewer_status": "approved",
+    "approved_paraphrase": "Students felt the trainer was clear but wanted more interactive scenarios.",
+    "theme_ids": ["THEME_ENGAGEMENT", "THEME_PACE"]
+  },
+  "report_schema": {
+    "dataset_key": "E01",
+    "audience": "Students",
+    "mode": "production",
+    "summary_blocks": [
+      "Student confidence in explaining 988 met the 90% benchmark, but qualitative flags suggest engagement risks in hybrid cohorts."
+    ],
+    "evidence_ids": ["EV_988_POST_01"],
+    "proposed_action_id": "ACT_PILOT_ROLEPLAY",
+    "staff_owner": "Training Lead",
+    "follow-up_measure": "Proportion of students completing the interactive roleplay scenario in the next cohort.",
+    "limitations": "Excludes 3 school districts due to missing post-survey completion criteria."
+  }
+}

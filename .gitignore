@@ -1,0 +1,5 @@
+.env
+uploads/
+private_review_files/
+__pycache__/
+.pytest_cache/
