@@ -1,0 +1,28 @@
+dimension,group,item,n,pre_mean,post_mean,gain,post_pct_strongly_agree,pct_rated_lower_after
+role,Caregiver/parent,Identify mental health challenges,53,3.7,4.43,0.74,60.4,3.8
+role,Caregiver/parent,Describe 988 and how it works,53,3.28,4.53,1.25,60.4,0.0
+role,Caregiver/parent,Know when to use 988,53,2.96,4.51,1.55,58.5,1.9
+role,Community member,Identify mental health challenges,84,3.89,4.51,0.62,52.4,1.2
+role,Community member,Describe 988 and how it works,84,2.79,4.64,1.86,67.9,0.0
+role,Community member,Know when to use 988,84,2.76,4.64,1.88,64.3,0.0
+role,Multiple roles,Identify mental health challenges,13,4.08,4.62,0.54,61.5,0.0
+role,Multiple roles,Describe 988 and how it works,13,3.31,4.77,1.46,76.9,0.0
+role,Multiple roles,Know when to use 988,13,3.46,4.77,1.31,76.9,0.0
+role,School staff,Identify mental health challenges,59,4.31,4.69,0.39,69.5,3.4
+role,School staff,Describe 988 and how it works,59,3.17,4.63,1.46,66.1,1.7
+role,School staff,Know when to use 988,59,3.36,4.75,1.39,74.6,0.0
+role,Student,Identify mental health challenges,1046,3.79,4.27,0.48,40.0,4.4
+role,Student,Describe 988 and how it works,1046,3.29,4.37,1.08,49.3,4.3
+role,Student,Know when to use 988,1046,3.55,4.49,0.94,59.5,4.0
+county,Anne Arundel,Identify mental health challenges,906,3.85,4.29,0.45,41.5,4.1
+county,Anne Arundel,Describe 988 and how it works,906,3.33,4.4,1.06,50.4,3.9
+county,Anne Arundel,Know when to use 988,906,3.64,4.52,0.88,61.1,3.6
+county,Montgomery,Identify mental health challenges,33,3.67,4.39,0.73,45.5,0.0
+county,Montgomery,Describe 988 and how it works,33,2.21,4.79,2.58,78.8,0.0
+county,Montgomery,Know when to use 988,33,2.42,4.73,2.3,72.7,0.0
+county,Prince George's,Identify mental health challenges,297,3.75,4.37,0.61,47.8,4.7
+county,Prince George's,Describe 988 and how it works,297,3.11,4.42,1.31,54.9,3.7
+county,Prince George's,Know when to use 988,297,3.06,4.49,1.44,58.6,3.4
+county,Queen Anne's,Identify mental health challenges,12,3.67,4.25,0.58,50.0,0.0
+county,Queen Anne's,Describe 988 and how it works,12,3.67,4.08,0.42,33.3,0.0
+county,Queen Anne's,Know when to use 988,12,3.17,4.17,1.0,41.7,0.0

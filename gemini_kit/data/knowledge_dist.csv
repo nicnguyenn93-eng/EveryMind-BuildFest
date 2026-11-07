@@ -1,0 +1,31 @@
+item,moment,level,level_label,pct
+Identify mental health challenges,Before,1,Strongly disagree,2.2
+Identify mental health challenges,Before,2,Disagree,4.7
+Identify mental health challenges,Before,3,Neutral,20.3
+Identify mental health challenges,Before,4,Agree,54.7
+Identify mental health challenges,Before,5,Strongly agree,18.2
+Identify mental health challenges,After,1,Strongly disagree,1.2
+Identify mental health challenges,After,2,Disagree,1.0
+Identify mental health challenges,After,3,Neutral,6.1
+Identify mental health challenges,After,4,Agree,48.4
+Identify mental health challenges,After,5,Strongly agree,43.3
+Describe 988 and how it works,Before,1,Strongly disagree,8.4
+Describe 988 and how it works,Before,2,Disagree,18.8
+Describe 988 and how it works,Before,3,Neutral,26.1
+Describe 988 and how it works,Before,4,Agree,32.6
+Describe 988 and how it works,Before,5,Strongly agree,14.1
+Describe 988 and how it works,After,1,Strongly disagree,1.1
+Describe 988 and how it works,After,2,Disagree,1.2
+Describe 988 and how it works,After,3,Neutral,5.4
+Describe 988 and how it works,After,4,Agree,40.2
+Describe 988 and how it works,After,5,Strongly agree,52.1
+Know when to use 988,Before,1,Strongly disagree,8.8
+Know when to use 988,Before,2,Disagree,14.3
+Know when to use 988,Before,3,Neutral,20.7
+Know when to use 988,Before,4,Agree,34.3
+Know when to use 988,Before,5,Strongly agree,21.8
+Know when to use 988,After,1,Strongly disagree,1.3
+Know when to use 988,After,2,Disagree,1.0
+Know when to use 988,After,3,Neutral,3.6
+Know when to use 988,After,4,Agree,33.5
+Know when to use 988,After,5,Strongly agree,60.6
