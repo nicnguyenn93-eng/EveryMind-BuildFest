@@ -3,6 +3,10 @@ import csv
 import hashlib
 import json
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from clean import EXPORT_COLUMNS, load_export
 
 ROOT = Path(__file__).resolve().parent
 
@@ -33,21 +37,30 @@ def build():
                                 if i <= 10 else "Synthetic feedback: no suggested change."),
         ))
     csv_path = ROOT / "synthetic_survey.csv"
-    with csv_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
-    key = "sha256:" + hashlib.sha256(csv_path.read_bytes()).hexdigest()
-    responses, comments = [], []
+    labels = {1: "Strongly disagree", 2: "Disagree", 3: "Neither agree nor disagree", 4: "Agree", 5: "Strongly agree"}
+    export_rows = []
     for row in rows:
-        response = {k: v for k, v in row.items() if k not in ("most_valuable", "how_can_we_improve")}
-        response["role_membership"] = response.pop("role").split(";")
-        responses.append(response)
+        source = dict(row, start_time="2026-11-01T09:00:00", completion_time="2026-11-01T09:05:00",
+                      language="English", presenter_engagement="Agree", presenter_knowledge="Strongly agree",
+                      training_organization="Very agree" if row["id"] == "SYN030" else "Agree")
+        source["role"] = source["role"].replace("School staff", "School staff member").replace("Community member", "Other (e.g., community member)") + ";"
+        for field in [f"q{i}_knowledge" for i in range(1, 7)]:
+            source[field] = labels.get(source[field])
+        export_rows.append({header: source[key] for key, header in EXPORT_COLUMNS.items()})
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(EXPORT_COLUMNS.values()))
+        writer.writeheader()
+        writer.writerows(export_rows)
+    key, normalized, _, import_audit = load_export(csv_path.read_bytes(), csv_path.name)
+    responses = normalized.to_dict("records")
+    comments = []
+    for row in rows:
+        response = next(r for r in responses if r["id"] == row["id"])
         for field in ("most_valuable", "how_can_we_improve"):
             approved = int(row["id"][3:]) <= 10
             comments.append(dict(
                 private_record_key=f"{row['id']}:{field}", response_id=row["id"],
-                source_field=field, role_membership=response["role_membership"], language="en",
+                source_field=field, role_membership=response["role_membership"], language="English",
                 content_fingerprint=hashlib.sha256(row[field].encode("utf-8")).hexdigest(),
                 reviewer_status="approved" if approved else "pending",
                 approved_paraphrase=("The explanation of 988 was clear." if field == "most_valuable"
@@ -76,10 +89,10 @@ def build():
     save("evidence.json", evidence)
     save("report.json", report)
     (ROOT.parent / "schema.json").write_text(json.dumps(dict(
-        contract_version="k3-v1", description="Synthetic example records, not a JSON Schema validator. See examples/README.md.",
+        contract_version="k3-v2", description="Export-compatible synthetic example records, not a JSON Schema validator. See examples/README.md.",
         evidence_row_schema=evidence[0], reviewed_comment_schema=comments[0],
         report_schema=report), indent=2) + "\n", encoding="utf-8")
-    save("audit.json", dict(dataset_key=key, total_rows=30, unique_responses=30,
+    save("audit.json", dict(import_audit,
                             audience_totals={"Students": 10, "School staff": 9, "Known non-students": 20},
                             valid_intent=29, zero_intent=1, missing_intent=1,
                             comment_records=60, reviewed_records=20, pending_records=40))
@@ -94,7 +107,7 @@ def build():
                "Label 10-29 valid respondents limited.",
                "Withhold School staff figures and paraphrases (nine members).",
                "Withhold complementary releases that reveal a suppressed result; use one dimension at a time."] ))
-    save("workbook_rows.json", [list(rows[0])] + [list(r.values()) for r in rows])
+    save("workbook_rows.json", [list(EXPORT_COLUMNS.values())] + [list(r.values()) for r in export_rows])
     return rows
 
 

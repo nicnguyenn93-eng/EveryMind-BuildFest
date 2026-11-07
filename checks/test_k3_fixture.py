@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from clean import load_export, EXPORT_COLUMNS
 
 ROOT = Path(__file__).resolve().parents[1] / "examples"
 
@@ -16,13 +19,14 @@ def test_csv_xlsx_and_normalized_records_agree():
     csv = pd.read_csv(ROOT / "synthetic_survey.csv")
     xlsx = pd.read_excel(ROOT / "synthetic_survey.xlsx", sheet_name="Survey Data")
     pd.testing.assert_frame_equal(csv, xlsx)
-    assert len(csv) == csv.id.nunique() == 30
+    assert list(csv.columns) == list(EXPORT_COLUMNS.values())
+    assert len(csv) == csv["Id"].nunique() == 30
     normalized = read("normalized_responses")
-    for raw, response in zip(csv.to_dict("records"), normalized):
-        assert response["role_membership"] == raw["role"].split(";")
-        for field, value in response.items():
-            if field != "role_membership":
-                assert pd.isna(raw[field]) if value is None else raw[field] == value
+    csv_key, csv_responses, _, _ = load_export((ROOT / "synthetic_survey.csv").read_bytes(), "test.csv")
+    xlsx_key, xlsx_responses, _, _ = load_export((ROOT / "synthetic_survey.xlsx").read_bytes(), "test.xlsx")
+    assert csv_key == xlsx_key
+    pd.testing.assert_frame_equal(csv_responses, xlsx_responses)
+    assert csv_responses.to_dict("records") == normalized
     assert normalized[0]["intent"] == normalized[0]["recommendation"] == 0
     assert normalized[1]["intent"] is None
     assert sum("Student" in r["role_membership"] for r in normalized) == 10
@@ -31,7 +35,7 @@ def test_csv_xlsx_and_normalized_records_agree():
 
 def test_paired_evidence_and_current_report_lineage():
     rows = read("normalized_responses")
-    key = "sha256:" + hashlib.sha256((ROOT / "synthetic_survey.csv").read_bytes()).hexdigest()
+    key = load_export((ROOT / "synthetic_survey.csv").read_bytes(), "test.csv")[0]
     evidence = read("evidence")
     for e in evidence:
         selected = [r for r in rows if e["audience"] == "All respondents" or "Student" in r["role_membership"]]
@@ -57,14 +61,16 @@ def test_paired_evidence_and_current_report_lineage():
 
 
 def test_review_identity_coverage_and_action_support():
-    raw = pd.read_csv(ROOT / "synthetic_survey.csv").set_index("id")
+    _, structural, raw, _ = load_export((ROOT / "synthetic_survey.csv").read_bytes(), "test.csv")
+    raw = raw.set_index("private_record_key")
+    structural = structural.set_index("id")
     comments = read("reviewed_comments")
     assert len(comments) == len({c["private_record_key"] for c in comments}) == 60
     assert sum(c["reviewer_status"] == "approved" for c in comments) == 20
     for comment in comments:
-        text = raw.loc[comment["response_id"], comment["source_field"]]
+        text = raw.loc[comment["private_record_key"], "original_text"]
         assert comment["content_fingerprint"] == hashlib.sha256(text.encode("utf-8")).hexdigest()
-        assert comment["role_membership"] == raw.loc[comment["response_id"], "role"].split(";")
+        assert comment["role_membership"] == structural.loc[comment["response_id"], "role_membership"]
         if comment["reviewer_status"] == "pending":
             assert comment["approved_paraphrase"] is None and comment["theme_ids"] == []
     for theme in read("theme_summary"):

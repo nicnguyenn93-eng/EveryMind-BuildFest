@@ -1,8 +1,8 @@
 {
-  "contract_version": "k3-v1",
-  "description": "Synthetic example records, not a JSON Schema validator. See examples/README.md.",
+  "contract_version": "k3-v2",
+  "description": "Export-compatible synthetic example records, not a JSON Schema validator. See examples/README.md.",
   "evidence_row_schema": {
-    "dataset_key": "sha256:a8449277b55912689f729fc43968a3ed4635fe68afab3a3f4c940ab76f20c3d2",
+    "dataset_key": "sha256:971c9cc0a973f3fb8c680c089d1108ee2d9b08e4742c6e75f79acdfca75a98ce",
     "audience": "Students",
     "evidence_id": "STUDENTS_EXPLAIN_988_BEFORE",
     "survey_question": "Explain 988: recalled before agreement",
@@ -19,10 +19,10 @@
     "response_id": "SYN001",
     "source_field": "most_valuable",
     "role_membership": [
-      "Student",
-      "School staff"
+      "School staff",
+      "Student"
     ],
-    "language": "en",
+    "language": "English",
     "content_fingerprint": "01c00f8ce94a7f493eefabba825e2b58c9376ca86403e88fb63172d86f3c9091",
     "reviewer_status": "approved",
     "approved_paraphrase": "The explanation of 988 was clear.",
@@ -31,7 +31,7 @@
     ]
   },
   "report_schema": {
-    "dataset_key": "sha256:a8449277b55912689f729fc43968a3ed4635fe68afab3a3f4c940ab76f20c3d2",
+    "dataset_key": "sha256:971c9cc0a973f3fb8c680c089d1108ee2d9b08e4742c6e75f79acdfca75a98ce",
     "audience": "Students",
     "mode": "template",
     "summary_blocks": [

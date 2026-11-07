@@ -31,12 +31,12 @@ Open the local URL printed by Streamlit (normally `http://localhost:8501`). Stop
 | File | Responsibility / current state |
 |---|---|
 | `app.py` | Streamlit UI scaffold; backend imports are commented out. |
-| `clean.py` | Partial XLSX/CSV import; normalization and validation are incomplete. |
+| `clean.py`, `export_columns.json` | Actual-export XLSX/CSV import, text-score normalization, role membership, private comments, duplicate-ID rejection, and audit. Not yet connected to the UI; county alias mapping remains. |
 | `metrics.py` | Preliminary single-item calculation; paired metrics and full privacy rules remain. |
 | `feedback.py`, `codebook.csv` | Reviewed feedback/search stub and empty codebook. |
 | `report.py`, `action_catalog.json`, `prompts/` | Report stub and draft action rules; validation, provider, and fallback remain. |
 | `export_pdf.py` | PDF generation stub. |
-| `schema.json` | K3 v1 synthetic example records, consistent with `examples/`; production modules still need to adopt these contracts. |
+| `schema.json` | K3 v2 export-compatible example records, consistent with `examples/`; downstream modules still need to adopt these contracts. |
 | `checks/` | K3 fixture consistency checks; production regression tests remain to be written. |
 | `examples/` | K3 synthetic CSV/XLSX inputs, expected output records, loader, and receiving-review checklist. See [K3 handoff](examples/README.md). |
 
@@ -50,7 +50,7 @@ Run checks on Windows with:
 .\.venv\Scripts\python.exe -m pytest checks -q
 ```
 
-On macOS/Linux use `.venv/bin/python -m pytest checks -q`. K3 checks verify the shared synthetic inputs and expected records, not production behavior. Add regression tests for the build playbook's original/updated-file calculations, audience scoping, privacy suppression, report validation, and offline behavior before release.
+On macOS/Linux use `.venv/bin/python -m pytest checks -q`. Tests cover export import and K3 fixture consistency, including CSV/XLSX equivalence, reordered headers, optional columns, duplicate IDs, score statuses, and content changes. Full app calculations, audience scoping, privacy suppression, report validation, and offline behavior still need regression tests before release. See [case alignment](docs/case_alignment.md) for official requirements and current gaps.
 
 ## Local data and secrets
 
