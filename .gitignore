@@ -3,3 +3,26 @@ uploads/
 private_review_files/
 __pycache__/
 .pytest_cache/
+
+# Local Python environments
+venv/
+.venv/
+
+# Credentials and local Streamlit configuration
+.env.*
+!.env.example
+.streamlit/secrets.toml
+*.pem
+*.key
+
+# Private survey inputs and review materials (keep synthetic fixtures explicit)
+private_data/
+review_files/
+*Survey_Data*.xlsx
+*Survey_Data*.csv
+
+# Downloaded models and local caches
+.cache/
+model_cache/
+models/
+*.pyc
