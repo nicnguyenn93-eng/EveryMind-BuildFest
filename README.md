@@ -1,65 +1,60 @@
-# EveryMind Training Improvement Assistant
+# EveryMind survey CSV import
 
-Local Streamlit application being built for the EveryMind training feedback workflow.
+Convert the original Excel survey into a verified CSV. This repository currently
+contains only the converter and its tests.
 
-**Status: initial scaffold, not a working analysis tool.** The current interface displays hardcoded example metrics, feedback, and reports regardless of the uploaded file. The PDF download is a placeholder and is not a valid executive PDF. Do not use these outputs as survey findings or submission evidence.
+## Setup
 
-## Quick setup
-
-Install Python 3.11 and Git. Clone this team's repository using its GitHub URL, then open a terminal in the cloned `everymind-assistant` folder.
-
-Windows PowerShell:
-
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m streamlit run app.py
-```
-
-macOS / Linux (with Python 3.11 installed):
+Use Python 3.11 or newer. From the repository root:
 
 ```bash
-python3.11 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -m streamlit run app.py
+python -m venv .venv
 ```
 
-Open the local URL printed by Streamlit (normally `http://localhost:8501`). Stop the server with Ctrl+C. These commands do not require activating the environment. No API key is needed for the current mock interface; provider integration is not implemented. Python 3.11 is the suggested team baseline; a clean-machine installation has not yet been verified.
+Activate it on macOS/Linux with `source .venv/bin/activate`, or on Windows
+PowerShell with `.\.venv\Scripts\Activate.ps1`. Then install the dependency:
 
-## Team modules
-
-| File | Responsibility / current state |
-|---|---|
-| `app.py` | Streamlit UI scaffold; backend imports are commented out. |
-| `clean.py`, `export_columns.json` | Actual-export XLSX/CSV import, text-score normalization, role membership, private comments, duplicate-ID rejection, and audit. Not yet connected to the UI; county alias mapping remains. |
-| `metrics.py` | Preliminary single-item calculation; paired metrics and full privacy rules remain. |
-| `feedback.py`, `codebook.csv` | Reviewed feedback/search stub and empty codebook. |
-| `report.py`, `action_catalog.json`, `prompts/` | Report stub and draft action rules; validation, provider, and fallback remain. |
-| `export_pdf.py` | PDF generation stub. |
-| `schema.json` | K3 v2 export-compatible example records, consistent with `examples/`; downstream modules still need to adopt these contracts. |
-| `checks/` | K3 fixture consistency checks; production regression tests remain to be written. |
-| `examples/` | K3 synthetic CSV/XLSX inputs, expected output records, loader, and receiving-review checklist. See [K3 handoff](examples/README.md). |
-
-## Updating and checking work
-
-Commit or otherwise preserve local edits before pulling teammates' changes. After updating code, rerun the dependency installation command above if `requirements.txt` changed, then restart Streamlit.
-
-Run checks on Windows with:
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest checks -q
+```bash
+python -m pip install -r requirements.txt
 ```
 
-On macOS/Linux use `.venv/bin/python -m pytest checks -q`. Tests cover export import and K3 fixture consistency, including CSV/XLSX equivalence, reordered headers, optional columns, duplicate IDs, score statuses, and content changes. Full app calculations, audience scoping, privacy suppression, report validation, and offline behavior still need regression tests before release. See [case alignment](docs/case_alignment.md) for official requirements and current gaps.
+## Convert the survey
 
-## Local data and secrets
+Place `BuildFest_EveryMind_Survey_Data_FULL.xlsx` in `private_data/`, then run:
 
-Keep real survey exports in `uploads/` or `private_data/`, review sheets in `private_review_files/`, and local credentials in `.env` or `.streamlit/secrets.toml`. These locations, virtual environments, and model caches are ignored by Git. The application does not currently load `.env` or call a provider. Never commit real comments, identifiers, API keys, or private review data; inspect `git diff --cached` before pushing. Use synthetic data for shared fixtures.
+```bash
+python scripts/import_excel.py
+```
 
-## Next integration priorities
+This reads the `Survey Data` worksheet and writes `private_data/survey.csv`.
+The command prints the sheet name, data-row count, column count, and output path.
+The supplied workbook has 1,299 data rows and 20 columns.
 
-1. Agree on consistent input, evidence, reviewed-comment, and report contracts.
-2. Complete import, paired calculations, audience membership, privacy checks, and content-based dataset identity.
-3. Connect real evidence to the UI and invalidate reports on upload or audience changes.
-4. Implement reviewed local search, evidence-based action eligibility, report validation/fallback, and a real one-page PDF.
-5. Verify the live-provider path, clean-machine setup, and release checks before preparing final deliverables.
+To use another workbook, worksheet, or destination:
+
+```bash
+python scripts/import_excel.py --input private_data/another.xlsx --sheet "Survey Data" --output private_data/another.csv
+```
+
+The converter preserves the original headers, column order, all rows, whitespace,
+Unicode, and written responses. Blank cells become empty fields; zeros remain
+zeros. It uses UTF-8 with a BOM for Excel compatibility, and standard CSV quoting
+preserves commas, quotation marks, and embedded newlines. CSV stores text rather
+than Excel cell types or formatting; nonempty cell values use Python's `str()`
+representation, including any formula expressions.
+
+Every field is read back and compared with the source before the CSV replaces
+an existing output. The workbook is never modified. Missing files or worksheets
+produce an error without replacing an existing CSV.
+
+Keep real inputs and outputs in `private_data/`, which is ignored by Git.
+The source workbook and generated CSV are local files and are not included in
+the repository. The converter does not print individual responses.
+
+## Tests
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Tests use temporary synthetic workbooks and do not require the real survey.
