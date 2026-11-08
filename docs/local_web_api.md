@@ -132,7 +132,7 @@ correctness of every interpretation or recommendation.
 - HTTP tests cover current censored-only reads, actual new synthetic upload processing,
   source preservation on failures, safe errors, stale handles, local Origin/Host
   restrictions, strict booleans, optional fields, zero scores, and minimum-count protection.
-- Real selected export: **1,299 rows × 77 columns**, **293** valid calling scores.
+- Real selected export at this checkpoint: **1,299 rows × 77 columns**, **293** valid calling scores.
   Original workbook, cleaned checkpoint and censored CSV hashes remained unchanged.
 - Browser checks passed for existing-dataset selection, original-workbook upload
   (reusing its verified completed result), county/audience switching, county selection
@@ -216,3 +216,14 @@ Source workbook, cleaned checkpoint and censored CSV hashes stayed unchanged.
 Live artifacts remain ignored under
 `private_data/reports/72b08ff71ede/gemini_reliability_live/20261108T060734Z/`.
 These changes handle transient failures; they cannot guarantee provider capacity.
+
+## John's cleaning release integration (2026-11-08)
+
+The current local export now contains **1,299 rows × 90 columns**; its cleaned
+checkpoint has 62 columns. Uploads and the notebook use John's release safeguards
+with the existing Presidio adapter. Report statistic values and all 1,714 censored
+answers are unchanged; dataset hashes and comment evidence IDs change with the new
+schema. Refresh the dataset selection after regeneration. Python/HTTP interfaces
+and the frontend layout remain compatible. The full offline suite passed
+**424 tests and 67 subtests**, and all **54** release checks passed on the workbook.
+See [merge details and verification](cleaning_merge_verification.md).
