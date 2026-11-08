@@ -30,6 +30,15 @@ The detailed local verification report is at
 `private_data/censoring/72b08ff71ede/outputs/integration_verification.json`.
 Raw-text reviews are in the same run's `private/` directory and remain Git-ignored.
 
+The code utilities now live in `everymind_censoring/` (renamed from `scripts/`).
+Generated CSVs, baseline reviews, and the integrated run folders are grouped
+under `private_data/censoring/`; the original workbook remains in `private_data/`.
+All seventeen existing data files were checked by SHA-256 across the move and
+retained identical contents. The converter was also rerun successfully using
+its new default output path.
+The full suite was rerun after the rename: 46 tests and thirteen subtests passed,
+including the installed-model checks and John's cleaning checks.
+
 ## Comparison with the standalone Presidio baseline
 
 | Measure | Standalone | Integrated |
