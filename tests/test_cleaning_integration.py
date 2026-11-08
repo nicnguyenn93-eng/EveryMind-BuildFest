@@ -268,9 +268,10 @@ with tempfile.TemporaryDirectory() as directory:
                 with path.open(newline="") as handle:
                     return list(csv.DictReader(handle))
             clean, censored = [read(paths[name]) for name in ("cleaned", "censored")]
-            self.assertEqual(list(clean[0]), list(censored[0]))
+            self.assertEqual(["source_row", "original_id", *result.data.columns], list(censored[0]))
             self.assertIn("ada@example.com", clean[0]["most_valuable"])
-            self.assertNotIn("ada@example.com", censored[0]["most_valuable"])
+            self.assertNotIn("ada@example.com", censored[0]["most_valuable__redacted"])
+            self.assertNotIn("most_valuable", censored[0])
             for before, after in zip(clean, censored):
                 for key in ("source_row", "original_id", "response_id"):
                     self.assertEqual(before[key], after[key])
@@ -282,6 +283,33 @@ with tempfile.TemporaryDirectory() as directory:
             manifest = json.loads(paths["manifest"].read_text())
             self.assertEqual(["raw", "cleaned", "censored"], [stage["stage"] for stage in manifest["stages"]])
             self.assertIn("cleaned", paths["guide"].read_text())
+
+    def test_old_censored_schema_is_archived_only_with_successful_publication(self):
+        rows = [fictional_row(most_valuable="ada@example.com")]
+        result = self.process(rows)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            source = root / "raw" / "source.csv"
+            source.parent.mkdir()
+            source.write_bytes(csv_bytes(rows))
+            paths = write_stage_outputs(result, root, source)
+            old = result.cleaned_stage.copy()
+            for field in ("most_valuable", "improve"):
+                old[field] = result.data[field + "__redacted"]
+            paths["censored"].write_text(old.to_csv(index=False))
+            previous = {name: paths[name].read_bytes() for name in ("censored", "manifest", "guide")}
+            replace = Path.replace
+            def fail_guide(path, destination):
+                if path.name == "README.md":
+                    raise OSError("synthetic publication failure")
+                return replace(path, destination)
+            with patch.object(Path, "replace", fail_guide), self.assertRaises(OSError):
+                write_stage_outputs(result, root, source)
+            self.assertEqual(previous, {name: paths[name].read_bytes() for name in previous})
+            self.assertFalse(any(p.is_file() for p in (root / "archive").rglob("*")))
+            updated = write_stage_outputs(result, root, source)
+            for name, payload in previous.items():
+                self.assertEqual(payload, updated["archive_" + name].read_bytes())
 
     def test_stage_publication_rolls_back_all_folders(self):
         rows = [fictional_row(most_valuable="ada@example.com")]

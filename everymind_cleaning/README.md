@@ -37,7 +37,7 @@ The default data root is `private_data/`. Each run keeps a source-file hash key:
 
 - `raw/`: unmodified workbook/CSV. Inputs outside this folder are copied into `raw/<key>/`.
 - `cleaned/<key>/cleaned_<key>.csv`: standardized fields and normalized, uncensored comments before the privacy tool.
-- `censoring/<key>/censored_<key>.csv`: identical columns and row order; only the comment values change.
+- `censoring/<key>/censored_<key>.csv`: John's full result with `__redacted` comments, classifications, quality flags, derived fields, and two linkage columns (77 columns on this dataset). The cleaned checkpoint remains 51 columns; shared structured fields and row order match.
 - `reports/<key>/`: cleaning audit, mapping review, private distress-review subset, and a manifest with stage paths, counts, hashes, and linkage columns.
 
 Presidio's summary sits beside the censored CSV. Its private/ subfolder contains
@@ -50,6 +50,11 @@ removed blank/duplicate rows are recorded in the audit. They do not affect dedup
 `private_data/README.md` links to the latest completed run. The notebook uses the
 same publisher. The three-stage command creates no separate analysis export;
 John's existing notebook analysis code and in-memory `Result.data` are retained.
+`cleaned_analysis.py` reads the full censored CSV directly; its JSON goes under
+`reports/<key>/` and its pending review/citation files under `censoring/<key>/private/`.
+It never reopens the source or private-original sidecars. Its fingerprints use
+censored wording. Older 51-column censored exports are archived during migration;
+rerun the primary pipeline if the reader reports an outdated export/manifest.
 Earlier mixed-layout results are preserved in `archive/previous_censoring/`.
 Standalone full-CSV Presidio runs use `censoring/baseline/` separately.
 
@@ -86,7 +91,7 @@ to English. John's existing language heuristic supplies those routing codes.
 ```bash
 python -m pip install -r requirements-dev.txt
 python -m unittest discover -s tests -v
-python -m pytest everymind_cleaning/checks -q
+python -m pytest tests checks everymind_cleaning/checks -q
 RUN_PRESIDIO_INTEGRATION=1 python -m unittest discover -s tests -p test_cleaning_integration.py -v
 ```
 

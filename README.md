@@ -58,12 +58,13 @@ Each completed run writes these stages, grouped by its source-file hash prefix:
 | --- | --- | --- |
 | 0 | `private_data/raw/` | Original workbook or CSV, unchanged. External inputs are copied here for traceability. |
 | 1 | `private_data/cleaned/<key>/` | `cleaned_<key>.csv`: John's standardized values and normalized **uncensored** comments, immediately before Presidio. |
-| 2 | `private_data/censoring/<key>/` | `censored_<key>.csv`: the same columns and rows as cleaned, with only comment values replaced. Includes the summary and private before/after reviews. |
+| 2 | `private_data/censoring/<key>/` | `censored_<key>.csv`: John's complete result with Presidio text in `__redacted` columns, classification, quality flags, derived values, and linkage. Includes the summary and private before/after reviews. |
 | — | `private_data/reports/<key>/` | Cleaning audit, unknown-label review, private distress review, and `manifest.json` listing stage order, files, counts, and hashes. |
 
-On the supplied survey, raw contains 1,299 rows and 20 columns. Cleaned and
-censored each contain 1,299 rows and 51 columns, including cleaning metadata
-and row linkage. Censoring changes only the two comment fields.
+On the supplied survey, raw contains 1,299 rows and 20 columns, cleaned has
+1,299 rows and 51 columns, and censored has 1,299 rows and 77 columns: John's
+75-column result plus `source_row` and `original_id`. Shared structured values
+are unchanged. The censored export contains no uncensored comment columns.
 
 `private_data/README.md` links to the latest completed run. The stage CSVs share
 `source_row`, `original_id`, and `response_id`; use these to trace a response
@@ -74,9 +75,11 @@ audit. Provenance is excluded from John's duplicate comparisons.
 The cleaned stage still contains uncensored text. Verbatim source comments are
 retained in the raw input and the censoring stage's private files; the cleaned
 stage contains John's normalized text. Detection offsets refer to
-`normalized_input` in the review CSV. The censored CSV has the same schema as
-the cleaned CSV. John's core `Result.data` and existing notebook analysis logic
-remain available; this command publishes no separate analysis stage.
+`normalized_input` in the review CSV. Compare each cleaned comment with its
+corresponding `__redacted` column in the censored CSV. John's core `Result.data`
+and notebook analysis logic remain available. An existing 51-column censored
+export and its manifest/guide are archived under `archive/censoring_schema_v1/`
+when the full result replaces it. No separate analysis stage is created.
 
 John's existing heuristic chooses English/Spanish per comment, with form-language
 fallback. Presidio models and rules are unchanged. Unsupported routed languages
@@ -232,10 +235,31 @@ this baseline preserves the requested field-based routing.
 ## Imported analysis tools
 
 Main's descriptive statistics, reviewed-comment evidence, and Gemini citation
-kit are included. John's cleaner and local Presidio remain the primary data
-preparation path. The legacy `clean.py` loader, configuration, and synthetic
-examples are retained for compatibility and analysis regression checks.
-The old mock UI and report/PDF scaffolding are not restored.
+kit are included. After the primary pipeline finishes, analyze the censored CSV:
+
+```bash
+python cleaned_analysis.py private_data/censoring/72b08ff71ede/censored_72b08ff71ede.csv
+```
+
+Use the key printed by your pipeline run for other inputs. The command checks
+the v2 manifest and CSV hash, reads no raw/private-original files, and writes
+`private_data/reports/<key>/ai_input.json`. Use `--audience Students`,
+`--reviews`, `--output` (inside private_data), or `--prepare-review` as needed.
+Review packets and private citation maps stay in `censoring/<key>/private/`.
+Keyword analysis and fingerprints use censored wording; classification metadata
+retains John's upstream decisions. A changed comment cannot inherit a review
+fingerprint for its original wording. Analysis dataset keys hash the exact
+censored CSV, independently of the source-file key used for folder names.
+
+The legacy `clean.py` loader and synthetic examples remain for compatibility
+and regression checks. The primary analysis command rejects raw inputs and old
+incomplete exports. The old mock UI and report/PDF scaffolding are not restored.
+
+Run the combined checks with:
+
+```bash
+RUN_PRESIDIO_INTEGRATION=1 python -m pytest tests checks everymind_cleaning/checks -q
+```
 
 See [analysis handoff](docs/analysis_handoff.md) and
 [Gemini kit](gemini_kit/README.md). The provider SDK remains optional;
