@@ -2,11 +2,56 @@
   "_about": "Human-approved mappings for values the base vocab does not cover. The pipeline never writes here automatically: unmapped values land in mapping_review.csv, a person decides, and approved rows are copied here so every future run reuses them.",
   "approved": {
     "likert5": [
-      {"raw": "Very agree", "maps_to": "Strongly agree", "approved_by": "team", "note": "Only in presenter/organization items; appears to come from one form version (mostly 2026-04-23 sessions). Judgment call: report a sensitivity check."},
-      {"raw": "Satisfied", "maps_to": "Agree", "approved_by": "team", "note": "Same form version as 'Very agree'. Judgment call: report a sensitivity check."}
+      {
+        "raw": "Very agree",
+        "maps_to": "Strongly agree",
+        "approved_by": "team",
+        "note": "Only in presenter/organization items; appears to come from one form version (mostly 2026-04-23 sessions). Judgment call: report a sensitivity check."
+      },
+      {
+        "raw": "Satisfied",
+        "maps_to": "Agree",
+        "approved_by": "team",
+        "note": "Same form version as 'Very agree'. Judgment call: report a sensitivity check."
+      },
+      {
+        "raw": "Totalmente en desacuerdo",
+        "maps_to": "Strongly disagree",
+        "approved_by": "John",
+        "note": "Standard Spanish 5-point Likert translation; approved by John 2026-11-07 for Spanish-language form exports."
+      },
+      {
+        "raw": "En desacuerdo",
+        "maps_to": "Disagree",
+        "approved_by": "John",
+        "note": "Standard Spanish 5-point Likert translation; approved by John 2026-11-07 for Spanish-language form exports."
+      },
+      {
+        "raw": "Ni de acuerdo ni en desacuerdo",
+        "maps_to": "Neither agree nor disagree",
+        "approved_by": "John",
+        "note": "Standard Spanish 5-point Likert translation; approved by John 2026-11-07 for Spanish-language form exports."
+      },
+      {
+        "raw": "De acuerdo",
+        "maps_to": "Agree",
+        "approved_by": "John",
+        "note": "Standard Spanish 5-point Likert translation; approved by John 2026-11-07 for Spanish-language form exports."
+      },
+      {
+        "raw": "Totalmente de acuerdo",
+        "maps_to": "Strongly agree",
+        "approved_by": "John",
+        "note": "Standard Spanish 5-point Likert translation; approved by John 2026-11-07 for Spanish-language form exports."
+      }
     ],
     "county": [
-      {"raw": "Montgomery County with NAMI MC", "maps_to": "Montgomery", "approved_by": "team", "note": "Training co-hosted with NAMI Montgomery County."}
+      {
+        "raw": "Montgomery County with NAMI MC",
+        "maps_to": "Montgomery",
+        "approved_by": "team",
+        "note": "Training co-hosted with NAMI Montgomery County."
+      }
     ]
   }
 }

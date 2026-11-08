@@ -136,7 +136,7 @@ def _run_all(data_path, schema, registry) -> pd.DataFrame:
                            _col(messy, "recommend the Understanding"), _col(messy, "Are you a"), _col(messy, "Id"))
     messy.loc[0, cc] = "Prince Georges Co."
     messy.loc[1, cc] = "anne arundel county"
-    messy.loc[2, cc] = "Mongomery"              # typo -> fuzzy
+    messy.loc[2, cc] = "Mongomery"              # typo -> review queue with a fuzzy suggestion, not applied
     messy.loc[3, cc] = "Baltimore"              # unknown -> review queue
     messy.loc[4, lk] = "STRONGLY AGREE "
     messy.loc[5, lk] = "Agreeeee"               # unknown Likert -> review queue, never fuzzy
@@ -150,7 +150,9 @@ def _run_all(data_path, schema, registry) -> pd.DataFrame:
     d, rq = r.data, r.audit.review_table()
     queued = set(rq["raw_value"])
     checks = {
-        "county typos mapped": list(d.loc[:2, "county"]) == ["Prince George's", "Anne Arundel", "Montgomery"],
+        "county variants mapped": list(d.loc[:1, "county"]) == ["Prince George's", "Anne Arundel"],
+        "county typo queued with suggestion, not applied":
+            pd.isna(d.loc[2, "county"]) and rq.set_index("raw_value").loc["Mongomery", "suggestion"] == "Montgomery",
         "unknown county queued": "Baltimore" in queued and d.loc[3, "county__status"] == ec.UNMAPPED,
         "case-variant Likert mapped": d.loc[4, "presenter_engaged"] == 5,
         "unknown Likert queued, not guessed": "Agreeeee" in queued and pd.isna(d.loc[5, "presenter_engaged"]),
