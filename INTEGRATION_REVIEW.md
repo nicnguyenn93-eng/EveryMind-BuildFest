@@ -27,7 +27,7 @@ were added. These results are for local review, not an anonymity certification.
   integration validation.
 
 The detailed local verification report is at
-`private_data/cleaning/72b08ff71ede/outputs/integration_verification.json`.
+`private_data/censoring/72b08ff71ede/outputs/integration_verification.json`.
 Raw-text reviews are in the same run's `private/` directory and remain Git-ignored.
 
 ## Comparison with the standalone Presidio baseline

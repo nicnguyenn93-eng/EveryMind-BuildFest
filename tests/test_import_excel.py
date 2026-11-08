@@ -14,10 +14,10 @@ from zipfile import ZipFile
 from openpyxl import Workbook
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from scripts.import_excel import _verify_csv, convert_excel
+from everymind_censoring.import_excel import _verify_csv, convert_excel
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "import_excel.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "everymind_censoring" / "import_excel.py"
 
 
 class ImportExcelTests(unittest.TestCase):
@@ -101,7 +101,7 @@ class ImportExcelTests(unittest.TestCase):
             csv_path.write_text("Id\r\nSYN999\r\n", encoding="utf-8-sig")
             _verify_csv(worksheet, csv_path)
 
-        with patch("scripts.import_excel._verify_csv", side_effect=corrupt_then_verify):
+        with patch("everymind_censoring.import_excel._verify_csv", side_effect=corrupt_then_verify):
             with self.assertRaisesRegex(ValueError, "verification failed at worksheet row 2"):
                 convert_excel(self.source, self.output)
         self.assertEqual(self.output.read_bytes(), b"previous CSV")

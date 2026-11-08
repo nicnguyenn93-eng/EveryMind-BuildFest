@@ -15,8 +15,8 @@ python -m everymind_cleaning.run_pipeline
 ```
 
 The command reads `private_data/BuildFest_EveryMind_Survey_Data_FULL.xlsx` directly.
-It also supports `--input private_data/survey.csv` and
-`--output-dir private_data/cleaning`. Generated files must stay in `private_data/`.
+It also supports `--input private_data/censoring/survey.csv` and
+`--output-dir private_data/censoring`. Generated files must stay in `private_data/`.
 Both CPU models must already be installed; runtime never downloads them.
 
 For the optional notebook and analysis dependencies:
@@ -33,7 +33,7 @@ as current. No translation or LLM suggestion hook is enabled.
 
 ## Outputs
 
-Under `private_data/cleaning/<dataset-key>/` (source SHA-256 prefix):
+Under `private_data/censoring/<dataset-key>/` (source SHA-256 prefix):
 
 - `outputs/cleaned_<key>.csv`: John's structured/derived data and redacted comments.
 - `outputs/audit_report_<key>.md`: cleaning steps, dropped rows, and quality flags.

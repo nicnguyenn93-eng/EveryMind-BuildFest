@@ -3,7 +3,7 @@
 from dataclasses import asdict
 from functools import lru_cache
 
-from scripts.redact_pii import Redaction, RedactionError, build_redactor
+from everymind_censoring.redact_pii import Redaction, RedactionError, build_redactor
 
 
 @lru_cache(maxsize=1)

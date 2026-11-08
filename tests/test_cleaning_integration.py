@@ -18,7 +18,7 @@ import pandas as pd
 from everymind_cleaning import everymind_clean as ec, privacy_adapter
 from everymind_cleaning.presidio_bridge import PresidioBridge, get_engine
 from everymind_cleaning import run_pipeline as runner
-from scripts.redact_pii import Detection, Redaction, RedactionError
+from everymind_censoring.redact_pii import Detection, Redaction, RedactionError
 
 
 class FakeEngine:

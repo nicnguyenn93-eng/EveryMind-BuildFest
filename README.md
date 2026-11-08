@@ -6,6 +6,11 @@ Presidio engine through its privacy adapter. The standalone Excel converter and
 full-CSV Presidio baseline remain available for comparison. No LLM is called by
 the integrated command.
 
+Code is organized into `everymind_cleaning/` (John's primary pipeline) and
+`everymind_censoring/` (our import and Presidio utilities). The original workbook
+stays in `private_data/`; generated CSVs, censoring reviews, and integrated run
+folders live together in the Git-ignored `private_data/censoring/` directory.
+
 ## Setup
 
 Use Python 3.11 (the tested version). From the repository root:
@@ -44,11 +49,11 @@ python -m everymind_cleaning.run_pipeline
 This uses John's Excel reader directly; an intermediate CSV is optional:
 
 ```bash
-python -m everymind_cleaning.run_pipeline --input private_data/survey.csv --output-dir private_data/cleaning
+python -m everymind_cleaning.run_pipeline --input private_data/censoring/survey.csv --output-dir private_data/censoring
 ```
 
 Results are grouped by the source-file hash prefix under
-`private_data/cleaning/<dataset-key>/outputs/` and `private/`. They include John's
+`private_data/censoring/<dataset-key>/outputs/` and `private/`. They include John's
 cleaned CSV, cleaning audit, label-mapping review, private comments, and distress
 review, plus a detailed Presidio review CSV and a text-free summary JSON.
 The supplied survey yields 1,299 records and 75 cleaned/derived columns.
@@ -86,17 +91,17 @@ real run, compatibility comparisons, and remaining detection problems.
 Place `BuildFest_EveryMind_Survey_Data_FULL.xlsx` in `private_data/`, then run:
 
 ```bash
-python scripts/import_excel.py
+python everymind_censoring/import_excel.py
 ```
 
-This reads the `Survey Data` worksheet and writes `private_data/survey.csv`.
+This reads the `Survey Data` worksheet and writes `private_data/censoring/survey.csv`.
 The command prints the sheet name, data-row count, column count, and output path.
 The supplied workbook has 1,299 data rows and 20 columns.
 
 To use another workbook, worksheet, or destination:
 
 ```bash
-python scripts/import_excel.py --input private_data/another.xlsx --sheet "Survey Data" --output private_data/another.csv
+python everymind_censoring/import_excel.py --input private_data/another.xlsx --sheet "Survey Data" --output private_data/censoring/another.csv
 ```
 
 The converter preserves the original headers, column order, all rows, whitespace,
@@ -117,22 +122,22 @@ the repository. The converter does not print individual responses.
 ## Run the Presidio baseline
 
 ```bash
-python scripts/redact_pii.py
+python everymind_censoring/redact_pii.py
 ```
 
-This reads `private_data/survey.csv` and creates:
+This reads `private_data/censoring/survey.csv` and creates:
 
-- `private_data/survey_presidio.csv`: the full CSV with only the two comment
+- `private_data/censoring/survey_presidio.csv`: the full CSV with only the two comment
   fields redacted. All other fields, original IDs, headers, and row order stay
   unchanged. Empty and whitespace-only comments stay exactly as written and
   bypass detection.
-- `private_data/survey_presidio.review.csv`: one row for each comment field,
+- `private_data/censoring/survey_presidio.review.csv`: one row for each comment field,
   including blank and unchanged comments. It contains the original text,
   redacted text, original ID, English/Spanish routing code, field name, status,
   and a JSON array of detection types, original-text offsets, and scores.
   `source_row` is the logical CSV record number, starting at 2 after the header;
   offsets are zero-based Python character indices with an exclusive end.
-- `private_data/survey_presidio.summary.json`: row/comment counts, mutually
+- `private_data/censoring/survey_presidio.summary.json`: row/comment counts, mutually
   exclusive changed/unchanged/blank counts, scanned counts, detections by type
   and language, and package/model versions. It contains no original responses
   or matched identifiers. Detections can overlap; the anonymizer resolves them
@@ -141,7 +146,7 @@ This reads `private_data/survey.csv` and creates:
 To use another source or output stem:
 
 ```bash
-python scripts/redact_pii.py --input private_data/another.csv --output private_data/another_presidio.csv
+python everymind_censoring/redact_pii.py --input private_data/censoring/another.csv --output private_data/censoring/another_presidio.csv
 ```
 
 Every output must stay inside `private_data/`. The script prevents overwriting
@@ -207,7 +212,7 @@ RUN_PRESIDIO_INTEGRATION=1 python -m unittest discover -s tests -p test_cleaning
 This exercises fictional English and Spanish names, emails, phone numbers,
 addresses, schools, contextual identifiers, and harmless survey text. It blocks
 DNS/socket connections, model downloads, and GPU activation, and writes detailed
-results to `private_data/presidio_synthetic_review.json`. Detection gaps are
+results to `private_data/censoring/presidio_synthetic_review.json`. Detection gaps are
 recorded for review instead of treating every target as guaranteed detection.
 
 The supplied survey has been processed and checked. See

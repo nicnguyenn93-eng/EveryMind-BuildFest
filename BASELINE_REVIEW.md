@@ -29,7 +29,7 @@ one each of `URL`, `US_BANK_NUMBER`, and `US_DRIVER_LICENSE`. These are model
 labels, not verified identities or confirmed sensitive values. Overlapping
 detections can refer to the same text. Detection counts are not accuracy.
 
-The exact runtime versions are in `private_data/survey_presidio.summary.json`.
+The exact runtime versions are in `private_data/censoring/survey_presidio.summary.json`.
 The run used Presidio Analyzer/Anonymizer 2.2.366, spaCy 3.8.11, and English and
 Spanish large models 3.8.0 on the CPU.
 
@@ -56,14 +56,14 @@ Across the twenty explicitly marked synthetic targets, fifteen were fully
 covered, one partly covered, and four missed. These character-span checks are
 diagnostic observations, not representative precision/recall or anonymization
 metrics. The detailed synthetic-only report is stored in
-`private_data/presidio_synthetic_review.json`.
+`private_data/censoring/presidio_synthetic_review.json`.
 
 ## Real comment spot-check
 
 A reproducible sample (Python random seed 988) selected ten changed and ten
 unchanged nonblank comments routed as English. All thirty nonblank comments
 routed as Spanish were also inspected. The fifty selected original/redacted
-pairs are retained locally in `private_data/survey_presidio.spotcheck.csv`.
+pairs are retained locally in `private_data/censoring/survey_presidio.spotcheck.csv`.
 Review displays masked possible identifying strings; no identifying excerpts
 are reproduced here.
 

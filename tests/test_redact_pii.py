@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from scripts import redact_pii as pii
+from everymind_censoring import redact_pii as pii
 
 
 class FakeRedactor:

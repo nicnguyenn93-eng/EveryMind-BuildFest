@@ -6,14 +6,14 @@ from pathlib import Path
 
 from . import everymind_clean as ec, privacy_adapter
 from .presidio_bridge import PresidioBridge
-from scripts.redact_pii import PRIVATE_DATA, RedactionError
+from everymind_censoring.redact_pii import CENSORING_DATA, PRIVATE_DATA, RedactionError
 
 
 PACKAGE = Path(__file__).resolve().parent
 SCHEMA = PACKAGE / "schema.json"
 REGISTRY = PACKAGE / "mapping_registry.json"
 DEFAULT_INPUT = PRIVATE_DATA / "BuildFest_EveryMind_Survey_Data_FULL.xlsx"
-DEFAULT_OUTPUT_DIR = PRIVATE_DATA / "cleaning"
+DEFAULT_OUTPUT_DIR = CENSORING_DATA
 
 
 def output_directories(dataset_key, output_dir=DEFAULT_OUTPUT_DIR):
