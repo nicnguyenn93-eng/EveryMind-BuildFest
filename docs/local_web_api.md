@@ -95,3 +95,33 @@ report by dataset hash and audience for that page session; a new processed hash
 cannot inherit the previous report. Request failures and template mode are visible.
 Generated text is a draft requiring review; validation does not establish the
 correctness of every interpretation or recommendation.
+
+## Verification checkpoint (2026-11-08)
+
+- Latest upstream Netra commit `59f3d87` was already merged by PR #2 (`beb3972`).
+  Local main fast-forwarded to it before integration; a final fetch found no newer UI commit.
+- Full regression with socket/DNS networking disabled: **143 tests passed and 67
+  subtests passed**, including English/Spanish model integration and John's checks.
+- HTTP tests cover current censored-only reads, actual new synthetic upload processing,
+  source preservation on failures, safe errors, stale handles, local Origin/Host
+  restrictions, strict booleans, optional fields, zero scores, and minimum-count protection.
+- Real selected export: **1,299 rows × 77 columns**, **293** valid calling scores.
+  Original workbook, cleaned checkpoint and censored CSV hashes remained unchanged.
+- Browser checks passed for existing-dataset selection, original-workbook upload
+  (reusing its verified completed result), county/audience switching, county selection
+  surviving iframe loading, map-to-report synchronization, rings and offline reporting.
+- One live request through the page returned `mode: llm` with `gemini-3.6-flash`.
+  It used the exact previously approved 15 aggregate records (no comments/IDs),
+  confirmed against the saved preview and request-prompt SHA-256
+  `526086eee739f33af1063b0cd6393f826230c71987c65f94ec74c90d1ce1a574`.
+  Montgomery was selected locally, but the returned evidence retained all-respondent
+  totals of 1,299. The key stayed on the server.
+- Existing recommendation limitation: the action catalog has student-focused options
+  and the offline template picks its first option when evidence is available. A
+  non-student report can therefore propose a student action. Catalog eligibility and
+  semantic suitability still need review; API wiring does not fix that business logic.
+
+The local report screenshot is kept in the ignored
+`private_data/reports/72b08ff71ede/web_integration/` folder. No private outputs,
+credentials or source data are committed. These integration checkpoints are local;
+publishing is separate.

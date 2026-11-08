@@ -1,3 +1,4 @@
+if (new URLSearchParams(location.search).has('dataset')) document.getElementById('dash-root').style.visibility = 'hidden';
 /* ---------- shared helpers ---------- */
 window.EX = (() => {
   const ALL = '(all)';
@@ -59,8 +60,8 @@ window.EX = (() => {
                  'splittitle', 'splitnote', 'mapsplit',
                  'ringlegend', 'ringcrumbs', 'rings', 'ringdetail'];
   const set = (patch) => { Object.assign(S, patch);
-    if (window.EXLIVE && 'mcounty' in patch && parent !== window)
-      parent.postMessage({type: 'everymind-county', county: S.mcounty, dataset_key: window.EXLIVE}, location.origin); window.EXSYNC && window.EXSYNC(); DRAWS.forEach((n) => dash.draw(n)); };
+    if (window.EXLIVE && window.EXREADY && 'mcounty' in patch && parent !== window)
+      parent.postMessage({type: 'everymind-county', county: S.mcounty, dataset_key: window.EXLIVE, audience: window.EXAUDIENCE}, location.origin); window.EXSYNC && window.EXSYNC(); DRAWS.forEach((n) => dash.draw(n)); };
   const legend = (el, metric) => {
     const cfg = METRICS[metric];
     el.replaceChildren();
@@ -230,7 +231,7 @@ dash.draw('map', (el) => {
   const path = d3.geoPath(proj);
   const grid = EX.css(el, '--em-grid');
   const rowFor = (name) => EX.look(rs, name, s.mrole, 'none', 'none');
-  const hasAny = (name) => !!EX.look(rs, name, EX.ALL, 'none', 'none');
+  const hasAny = (name) => { const row = EX.look(rs, name, EX.ALL, 'none', 'none'); return !!row && (!window.EXLIVE || EX.num(row.n) > 0); };
 
   // where the map should sit: the whole state, or filling the frame with one county
   let target = null, scale = 1;
@@ -254,11 +255,11 @@ dash.draw('map', (el) => {
                            return v === null ? grid : EX.colorFor(el, s.metric, v); })
     .on('mousemove', (ev, f) => {
       const r = rowFor(f.properties.name), lines = [];
-      if (!r) lines.push('No survey responses');
+      if (!r) lines.push(window.EXLIVE ? 'No publishable breakdown for this group' : 'No survey responses');
       else {
         const n = EX.num(r.n), v = EX.num(r[s.metric]);
         lines.push(`${EX.FMT.int(n)} response${n === 1 ? '' : 's'}${r.reliability === 'small sample' ? ' (small sample)' : ''}`);
-        lines.push(v === null ? (n < 10 ? 'Too few to show a figure' : 'No figure for this measure') : `${cfg.short}: ${cfg.fmt(v)}`);
+        lines.push(v === null ? (n == null ? 'Withheld or unavailable; not zero' : (n < 10 ? 'Too few to show a figure' : 'No figure for this measure')) : `${cfg.short}: ${cfg.fmt(v)}`);
         lines.push(f.properties.name === s.mcounty ? 'Click to zoom back out' : 'Click to zoom in');
       }
       tt.show(ev, f.properties.name + (f.properties.name.endsWith('City') ? '' : ' County'), lines);
@@ -428,7 +429,7 @@ dash.draw('rings', (el) => {
       tt.show(ev, d.data.name, [
         d.ancestors().reverse().slice(1, -1).map((a) => a.data.name).join(' › ') || null,
         `${EX.FMT.int(n)} response${n === 1 ? '' : 's'}${d.data.row.reliability === 'small sample' ? ' (small sample)' : ''}`,
-        v === null ? (n < 10 ? 'Too few to show a figure' : 'No figure for this measure') : `${cfg.short}: ${cfg.fmt(v)}`,
+        v === null ? (n == null ? 'Withheld or unavailable; not zero' : (n < 10 ? 'Too few to show a figure' : 'No figure for this measure')) : `${cfg.short}: ${cfg.fmt(v)}`,
         d.children ? 'Click to go deeper' : null,
       ]);
     })
@@ -614,6 +615,7 @@ dash.draw('mapsplit', (el) => {
     if (!response.ok) throw new Error('This censored dataset is no longer available. Reload the report.');
     const current = await response.json();
     window.EXLIVE = current.dataset_key;
+    window.EXAUDIENCE = current.audience;
     document.querySelector('#top p').textContent = `${current.summaries[EX.ALL].n ?? 'Withheld'} retained responses · ${current.audience}. Current censored dataset. Finer splits and rings show publishable groups only; omitted groups are not zero.`;
     document.querySelectorAll('#map .ex-notes li').forEach((li, i) => {
       const notes = ['Colour shows the selected measure; grey means no publishable figure.',
@@ -630,7 +632,11 @@ dash.draw('mapsplit', (el) => {
     EX.METRICS.pct_know_when.note = 'Paired valid before/after answers: % agreeing after training';
     dash.replace('cube', current.cube);
     EX.set({mcounty: EX.ALL, mrole: EX.ALL, focus: [], pick: []});
+    window.EXREADY = true;
+    document.getElementById('dash-root').style.visibility = '';
+    if (parent !== window) parent.postMessage({type:'everymind-ready', dataset_key:current.dataset_key, audience:current.audience},location.origin);
   } catch (error) {
+    document.getElementById('dash-root').style.visibility = '';
     document.getElementById('dash-root').replaceChildren(Object.assign(document.createElement('p'), {
       textContent: 'Could not load the current censored dataset. Reload the report; no prepared data is substituted.'}));
   }

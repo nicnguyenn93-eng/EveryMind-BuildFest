@@ -242,8 +242,9 @@ window.Live = (() => {
   }
   window.addEventListener('message', event => {
     if (event.origin !== location.origin || event.source !== document.getElementById('explorer-frame').contentWindow
-      || event.data?.type !== 'everymind-county' || !state.dashboard
-      || event.data.dataset_key !== state.dashboard.dataset_key) return;
+      || !['everymind-county','everymind-ready'].includes(event.data?.type) || !state.dashboard
+      || event.data.dataset_key !== state.dashboard.dataset_key || event.data.audience !== state.dashboard.audience) return;
+    if (event.data.type === 'everymind-ready') {syncExplorer(); return;}
     const county = event.data.county;
     if (county !== SEL.county && state.dashboard.counties.some(c => c.key === county && c.available)) {
       SEL.county = county; render();

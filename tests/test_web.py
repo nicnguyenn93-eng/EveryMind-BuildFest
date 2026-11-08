@@ -129,3 +129,34 @@ def test_failed_upload_keeps_previous_data_and_sanitizes_errors(exported):
         job=wait_job(c,result.json()['job_id'])
         assert job['status']=='failed' and 'SECRET' not in json.dumps(job) and 'ada@example.com' not in json.dumps(job)
     assert exported.path.read_bytes()==before
+
+
+def test_optional_display_fields_do_not_break_current_dataset(exported):
+    omitted={'training_date','presenter_engaged','presenter_engaged__status','recommend','recommend__status','call_intent','call_intent__status'}
+    def remove(header, rows):
+        header[:]=[name for name in header if name not in omitted]
+        for row in rows:
+            for name in omitted: row.pop(name,None)
+    rewrite(exported,remove)
+    from everymind_cleaning.censored_data import load_censored_export
+    value=Dashboard(load_censored_export(exported.path)).for_audience('All respondents')
+    row=value['cube'][0]
+    assert row['n']==40 and row['nps'] is row['call_mean'] is row['engaged_mean'] is None
+    json.dumps(value,allow_nan=False)
+
+
+def test_display_metric_protects_small_valid_complement(exported):
+    def change(_, rows):
+        for i,row in enumerate(rows):
+            row['county']='Montgomery' if i < 25 else ('Anne Arundel' if i < 37 else 'Rare place')
+            if 25 <= i < 39:
+                for name in ('identify_before','identify_after','describe_before','describe_after','when_before','when_after'):
+                    row[name]=''
+                    row[name+'__status']='skipped'
+    rewrite(exported,change)
+    from everymind_cleaning.censored_data import load_censored_export
+    value=Dashboard(load_censored_export(exported.path)).for_audience('All respondents')
+    root=value['cube'][0]
+    county=next(row for row in value['cube'] if row['county']=='Montgomery' and row['role']=='(all)' and row['split_dim']=='none')
+    assert root['gain_index'] is not None
+    assert county['gain_index'] is None

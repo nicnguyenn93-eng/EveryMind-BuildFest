@@ -56,7 +56,7 @@ class Dashboard:
         self.engaged = analysis.scores(export.data.rename(columns={"presenter_engaged__status": "presenter_engaged_status"}), "presenter_engaged")
         sessions = export.data.get("session_key", pd.Series("", index=export.data.index)).fillna("")
         codes = {key: f"Session {i + 1:03d}" for i, key in enumerate(sorted(set(sessions) - {""}))}
-        dates = pd.to_datetime(export.data.get("training_date"), errors="coerce")
+        dates = pd.to_datetime(export.data.get("training_date", pd.Series(None, index=export.data.index, dtype="object")), errors="coerce")
         self.splits = {"session": sessions.map(codes).fillna("Unspecified session"),
             "quarter": dates.dt.to_period("Q").astype(str).replace("NaT", "Unspecified quarter"),
             "language": export.data.get("form_language", pd.Series("unknown", index=export.data.index)).map(
@@ -89,12 +89,16 @@ class Dashboard:
         for key in ("recommendation", "intent"):
             valid[key] = analysis.scores(self.responses, key, 0, 10).notna()
         valid["post_988"] = analysis.scores(self.responses, "q4_knowledge").notna() & analysis.scores(self.responses, "q6_knowledge").notna()
+        valid["gain"] = self.gain.notna()
+        valid["engagement"] = self.engaged.notna()
         full_families = {family(e["evidence_id"]) for e in full["quantitative_evidence"]}
+        full_families.update(key for key in ("gain", "engagement") if analysis.publishable(valid[key], selected))
         families = {}
         for key, values in valid.items():
             numbers = {name: int((values & selected & mask).sum()) for name, mask in masks.items()}
             candidates = {name: name in available and key in full_families
-                          and any(family(e["evidence_id"]) == key for e in local[name]["quantitative_evidence"])
+                          and (analysis.publishable(values, selected & masks[name]) if key in ("gain", "engagement")
+                               else any(family(e["evidence_id"]) == key for e in local[name]["quantitative_evidence"]))
                           for name in locations}
             families[key] = release_partition(numbers, candidates)
 
@@ -133,6 +137,10 @@ class Dashboard:
             extra = self.display_metrics(scope, row["n"] is not None and row["n"] >= analysis.MIN_VALID)
             if row["county"] != ALL and row["county"] not in families["recommendation"]:
                 extra["nps"] = None
+            if row["county"] != ALL:
+                for key, column in (("gain", "gain_index"), ("engagement", "engaged_mean")):
+                    if row["county"] not in families[key]:
+                        extra[column] = None
             row.update(extra)
         self.add_breakdowns(cube, selected, masks, available)
         return dict(dataset_key=self.export.dataset_key, audience=audience, full_analysis=full,
