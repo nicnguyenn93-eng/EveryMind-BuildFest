@@ -83,8 +83,43 @@ and notebook use `write_stage_outputs` for the stage folders above.
 The original result fields, pipeline arguments, and batch adapter contract are
 retained. `PresidioBridge` loads the shared models once per process. Blank texts
 return unchanged, including John's `none` language tag. Nonblank texts require
-`en` or `es`; unsupported/unknown values stop processing rather than defaulting
-to English. John's existing language heuristic supplies those routing codes.
+`en` or `es`; unresolved values stop processing rather than defaulting to English.
+
+## Language routing
+
+Each normalized comment is classified independently by the cached, offline
+`lingua-language-detector==2.1.1` English/Spanish detector. The highest score must
+be at least `text.language_confidence_threshold` in `schema.json` (default 0.80,
+valid range greater than 0.5 through 1). A confident text result overrides the
+form language without changing the original or standardized form-language field.
+Scores compare English with Spanish; they are not measured accuracy guarantees
+and do not establish support for other languages.
+
+Uncertain responses use the form language and are flagged for review. Number-only,
+punctuation-only, contact-only, and ambiguous answers (`no`, `N/A`, `na`, `ok`)
+also use this fallback. Contacts and numbers are removed only from the detector's
+working input; Presidio receives the complete normalized comment. Blanks retain
+`none` and bypass Presidio. A nonblank response without confident detection or a
+valid English/Spanish fallback cannot produce a completed censored export.
+Detector setup/runtime failures stop processing without publishing results.
+
+Mixed comments use their dominant language and exactly one Presidio model;
+there is no splitting or second-model pass. No translation or model retraining
+is involved. The standalone historical censoring command is unchanged.
+
+The private review retains `language` as the effective model choice and adds:
+
+| Field | Meaning |
+| --- | --- |
+| `detected_language` | Leading detector candidate, or `unknown`/`none` without evidence. |
+| `language_confidence` | Candidate score, including below-threshold scores; empty without evidence. |
+| `language_source` | `text`, `form_fallback`, `blank`, or `unresolved`. |
+| `language_review_required` | True for every fallback or unresolved response. |
+
+The privacy summary records `language_fallbacks`, `language_review_required`,
+counts by `language_sources`, and `language_detector` package/version, supported
+languages, and threshold. Existing disagreement counts remain available. Routing
+diagnostics appear in review files, without adding columns to stage exports.
 
 ## Tests
 

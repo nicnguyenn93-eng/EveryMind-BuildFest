@@ -6,6 +6,7 @@ from pathlib import Path
 
 from . import everymind_clean as ec, privacy_adapter
 from .presidio_bridge import PresidioBridge
+from .language_routing import LanguageDetectionError
 from .stage_outputs import write_stage_outputs
 from everymind_censoring.redact_pii import RAW_DATA, PRIVATE_DATA, RedactionError
 
@@ -52,7 +53,7 @@ def main(argv=None):
     logging.getLogger("presidio-anonymizer").disabled = True
     try:
         result, paths = run(args.input, args.output_dir)
-    except RedactionError as error:
+    except (RedactionError, LanguageDetectionError) as error:
         parser.exit(1, f"Pipeline failed: {error}\n")
     except ec.SchemaError as error:
         parser.exit(1, f"Pipeline schema error: {error}\n")
@@ -64,6 +65,7 @@ def main(argv=None):
     print(f"Checks passed: {int(result.checks['pass'].sum())}/{len(result.checks)}")
     print(f"Comments: {summary['comments']:,}; changed: {summary['changed']:,}; unchanged: {summary['unchanged']:,}; blank: {summary['blank']:,}")
     print(f"Detections: {sum(summary['detections_by_entity_type'].values()):,}; form-language disagreements: {summary['form_language_disagreements']:,}")
+    print(f"Language fallbacks: {summary['language_fallbacks']:,}; language reviews required: {summary['language_review_required']:,}")
     for name, path in paths.items():
         print(f"{name}: {path}")
     return 0

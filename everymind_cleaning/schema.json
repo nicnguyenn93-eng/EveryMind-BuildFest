@@ -391,6 +391,7 @@
     }
   },
   "text": {
+    "language_confidence_threshold": 0.8,
     "unclear_phrases": [
       "idk",
       "i dont know",

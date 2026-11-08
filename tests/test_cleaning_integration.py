@@ -16,6 +16,7 @@ from unittest.mock import patch
 import pandas as pd
 
 from everymind_cleaning import everymind_clean as ec, privacy_adapter
+from everymind_cleaning import language_routing
 from everymind_cleaning.presidio_bridge import PresidioBridge, get_engine
 from everymind_cleaning import run_pipeline as runner
 from everymind_cleaning.stage_outputs import write_stage_outputs
@@ -128,18 +129,65 @@ class CleaningIntegrationTests(unittest.TestCase):
         self.assertEqual([4], steps["Ingest"]["removed_source_rows"])
         self.assertEqual([3], steps["Deduplicate"]["removed_source_rows"])
 
-    def test_johns_comment_language_overrides_form_without_changing_form(self):
+    def test_comment_language_overrides_form_without_changing_form(self):
         result = self.process([fictional_row(most_valuable="La información.", improve="I learned about help.")])
         self.assertEqual("en", result.data.form_language.iloc[0])
         self.assertEqual("es", result.data.most_valuable__lang.iloc[0])
         self.assertEqual("en", result.data.improve__lang.iloc[0])
         self.assertEqual(["es", "en"], [language for _, language in self.engine.calls])
         self.assertEqual(1, result.privacy_summary["form_language_disagreements"])
+        self.assertEqual(["text", "text"], result.privacy_review.language_source.tolist())
+        self.assertFalse(result.privacy_review.language_review_required.any())
+
+    def test_both_fields_route_independently_on_a_spanish_form(self):
+        result = self.process([fictional_row(form_language="Español (México)",
+                               most_valuable="I learned how to support someone in crisis.",
+                               improve="Con más ilustraciones.")])
+        self.assertEqual("es", result.data.form_language.iloc[0])
+        self.assertEqual(["en", "es"], [language for _, language in self.engine.calls])
+        self.assertEqual(2, len(self.engine.calls))
+        self.assertEqual(1, result.privacy_summary["form_language_disagreements"])
+
+    def test_fallback_metadata_and_summary_are_private_and_aligned(self):
+        result = self.process([fictional_row(most_valuable="ada@example.com", improve="???"),
+                               fictional_row(response_id="008", form_language="Español (México)",
+                                             most_valuable="988", improve="")])
+        review = result.privacy_review
+        self.assertEqual(["form_fallback", "form_fallback", "form_fallback", "blank"],
+                         review.language_source.tolist())
+        self.assertEqual([True, True, True, False], review.language_review_required.tolist())
+        self.assertEqual(["en", "es", "en"], [lang for _, lang in self.engine.calls])
+        self.assertEqual(3, result.privacy_summary["language_fallbacks"])
+        self.assertEqual(3, result.privacy_summary["language_review_required"])
+        self.assertEqual(0.8, result.privacy_summary["language_detector"]["confidence_threshold"])
+        self.assertEqual("2.1.1", result.privacy_summary["language_detector"]["version"])
+        self.assertTrue(review.language_confidence.isna().all())
+        self.assertNotIn("ada@example.com", json.dumps(result.privacy_summary))
+        for frame in (result.data, result.cleaned_stage, result.censored_stage):
+            self.assertNotIn("language_source", frame.columns)
+        self.assertEqual("<EMAIL_ADDRESS>", result.data.most_valuable__redacted.iloc[0])
+
+    def test_language_threshold_comes_from_configuration(self):
+        from types import SimpleNamespace
+        detector = SimpleNamespace(compute_language_confidence_values=lambda text: [
+            SimpleNamespace(language=SimpleNamespace(iso_code_639_1=SimpleNamespace(name="EN")), value=0.8),
+            SimpleNamespace(language=SimpleNamespace(iso_code_639_1=SimpleNamespace(name="ES")), value=0.2),
+        ])
+        cfg = ec.load_config(runner.SCHEMA, runner.REGISTRY)
+        cfg["text"]["language_confidence_threshold"] = 0.9
+        with patch.object(ec, "load_config", return_value=cfg), \
+             patch.object(language_routing, "get_detector", return_value=detector):
+            result = self.process([fictional_row(form_language="Español (México)", most_valuable="A response")])
+        self.assertEqual(["es"], [lang for _, lang in self.engine.calls])
+        self.assertEqual("form_fallback", result.privacy_review.language_source.iloc[0])
+        self.assertEqual("en", result.privacy_review.detected_language.iloc[0])
+        self.assertEqual(0.8, result.privacy_review.language_confidence.iloc[0])
+        self.assertEqual(0.9, result.privacy_summary["language_detector"]["confidence_threshold"])
 
     def test_unknown_nonblank_language_errors_and_adapter_restores(self):
         with privacy_adapter.using(self.bridge, "prior bridge"):
             with self.assertRaisesRegex(RedactionError, "Unsupported language"):
-                self.process([fictional_row(form_language="", most_valuable="xyzzy")])
+                self.process([fictional_row(form_language="", most_valuable="988")])
         self.assertFalse(privacy_adapter.is_connected())
         with privacy_adapter.using(self.bridge, "prior bridge"):
             with self.assertRaises(RuntimeError):
@@ -172,6 +220,33 @@ class CleaningIntegrationTests(unittest.TestCase):
                 with self.assertRaisesRegex(RedactionError, "models missing"):
                     runner.run(source, sentinel.parent)
             self.assertEqual(b"prior result", sentinel.read_bytes())
+
+    def test_language_detector_failures_dont_touch_prior_outputs(self):
+        for target in ("detector_metadata", "get_detector"):
+            with self.subTest(target=target), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                source = root / "source.csv"
+                source.write_bytes(csv_bytes([fictional_row()]))
+                sentinel = root / "reports" / "prior.json"
+                sentinel.parent.mkdir()
+                sentinel.write_bytes(b"prior result")
+                module = ec if target == "detector_metadata" else language_routing
+                with patch.object(runner, "PRIVATE_DATA", root), \
+                     patch.object(module, target, side_effect=language_routing.LanguageDetectionError("Detector unavailable")):
+                    with self.assertRaises(language_routing.LanguageDetectionError):
+                        runner.run(source, root, bridge=self.bridge)
+                self.assertEqual(b"prior result", sentinel.read_bytes())
+                self.assertFalse((root / "censoring").exists())
+
+    def test_unresolved_language_does_not_publish(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source.csv"
+            source.write_bytes(csv_bytes([fictional_row(form_language="", most_valuable="988")]))
+            with patch.object(runner, "PRIVATE_DATA", root), self.assertRaises(RedactionError):
+                runner.run(source, root, bridge=self.bridge)
+            self.assertEqual([], self.engine.calls)
+            self.assertFalse((root / "censoring").exists())
 
     def test_staging_and_finalization_failures_preserve_all_outputs(self):
         result = self.process([fictional_row(most_valuable="ada@example.com")])
