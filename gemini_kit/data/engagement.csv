@@ -1,0 +1,6 @@
+engaged_level,engaged_label,n,n_call,mean_call,mean_recommend
+1,Strongly disagree,14,3,,6.31
+2,Disagree,12,1,,6.73
+3,Neutral,95,18,5.61,6.31
+4,Agree,429,62,7.84,7.4
+5,Strongly agree,565,91,8.71,8.09

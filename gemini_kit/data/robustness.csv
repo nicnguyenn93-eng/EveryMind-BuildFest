@@ -1,0 +1,33 @@
+finding,metric,all_rows,recommended,strict
+1-2. Knowledge gain by item,Identify MH challenges: mean gain (1-5 scale),0.4588144726712856,0.4956175298804781,0.5719392314566577
+1-2. Knowledge gain by item,Identify MH challenges: % agree after,89.91531947652041,91.71314741035856,94.19124218051832
+1-2. Knowledge gain by item,Identify MH challenges: % newly confident,20.323325635103924,20.87649402390438,21.447721179624665
+1-2. Knowledge gain by item,Describe 988: mean gain (1-5 scale),1.1131639722863742,1.1585657370517928,1.2654155495978552
+1-2. Knowledge gain by item,Describe 988: % agree after,90.45419553502695,92.27091633466136,95.08489722966937
+1-2. Knowledge gain by item,Describe 988: % newly confident,46.34334103156274,47.56972111553785,49.41912421805183
+1-2. Knowledge gain by item,Know when to use 988: mean gain (1-5 scale),1.0053887605850655,1.0541832669322708,1.1403038427167114
+1-2. Knowledge gain by item,Know when to use 988: % agree after,92.30177059276366,94.18326693227093,96.24664879356568
+1-2. Knowledge gain by item,Know when to use 988: % newly confident,38.56812933025404,39.52191235059761,41.10813226094727
+3. Audience drives satisfaction,NPS - students,-2.1967526265520565,-1.962708537782143,-1.0752688172043
+3. Audience drives satisfaction,NPS - adults,79.53488372093022,79.20792079207921,79.26829268292683
+3. Audience drives satisfaction,NPS - Anne Arundel (all),-4.875406283856987,-5.044843049327352,-3.649635036496352
+3. Audience drives satisfaction,NPS - Anne Arundel students only,-9.621993127147766,-9.45626477541371,-8.365508365508367
+3. Audience drives satisfaction,NPS - Anne Arundel adults only,78.0,76.08695652173914,77.77777777777779
+3. Audience drives satisfaction,NPS - Prince George's (all),56.01374570446736,55.16014234875445,53.16455696202532
+3. Audience drives satisfaction,NPS - Prince George's students only,37.57575757575757,37.19512195121951,37.67123287671233
+3. Audience drives satisfaction,NPS - Prince George's adults only,79.50819672131148,79.82456140350878,77.77777777777779
+4. Engagement matters,Spearman: presenter engaged vs call-988 likelihood,0.414952509228462,0.4120517061420338,0.391671380477938
+4. Engagement matters,Spearman: presenter engaged vs recommend,0.2498093258521045,0.2498721959583169,0.2687056828386771
+4. Engagement matters,Spearman: pre-knowledge vs recommend,0.1087645416934902,0.1080943512210394,0.1283445386302049
+5. Behavioral intent coverage,% of respondents asked the call-988 item,23.40261739799846,23.26693227091633,23.05630026809652
+5. Behavioral intent coverage,"Mean likelihood to call 988 (0-10), where asked",7.658703071672355,7.6879432624113475,7.772908366533865
+6. Spanish speakers,n Spanish speakers (expanded definition),74.0,69.0,51.0
+6. Spanish speakers,Knowledge gain index - Spanish speakers,0.8333333333333333,0.9951690821256036,1.0784313725490196
+6. Spanish speakers,Knowledge gain index - others,0.8606802721088437,0.8974142776840923,0.9884519350811486
+6. Spanish speakers,Post knowledge index - Spanish speakers,4.270270270270269,4.507246376811594,4.529411764705882
+6. Spanish speakers,Post knowledge index - others,4.349659863945579,4.40725126475548,4.482521847690387
+6. Spanish speakers,% of Spanish speakers flagged for scale confusion (all rows),6.756756756756757,6.756756756756757,6.756756756756757
+6. Spanish speakers,% of others flagged for scale confusion (all rows),1.469387755102041,1.469387755102041,1.469387755102041
+7. Open text,"% of non-blank ""improve"" answers that are questions",38.70402802101576,39.06810035842294,40.588235294117645
+Overall,Responses in set,1299.0,1255.0,1119.0
+Overall,Overall NPS,12.006319115323857,11.683006535947715,11.05022831050228

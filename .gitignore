@@ -1,19 +1,30 @@
-# Real survey inputs and outputs stay local.
+# Real survey inputs, outputs, and review material stay local.
 private_data/
+uploads/
+private_review_files/
+review_files/
 *Survey_Data*.xlsx
 *Survey_Data*.csv
 
-# Local environments and Python caches.
+# Local environments, downloaded models, and caches.
 .venv/
 venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.cache/
+model_cache/
+models/
+.k3-build/
+node_modules/
+*.inspect.ndjson
+gemini_kit/results/
 
-# Local credentials and operating-system metadata.
+# Credentials and local configuration.
 .env
 .env.*
 !.env.example
+.streamlit/secrets.toml
 *.pem
 *.key
 .DS_Store

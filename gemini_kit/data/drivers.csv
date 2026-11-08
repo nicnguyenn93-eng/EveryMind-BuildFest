@@ -1,0 +1,13 @@
+factor,outcome,spearman,n
+Presenter engaged participants,Likelihood to call 988,0.41,175
+Presenter engaged participants,Likelihood to recommend,0.25,1099
+Presenter knew the subject,Likelihood to call 988,0.32,175
+Presenter knew the subject,Likelihood to recommend,0.22,1096
+Training was well organized,Likelihood to call 988,0.34,172
+Training was well organized,Likelihood to recommend,0.24,1093
+Knowledge after training,Likelihood to call 988,0.31,282
+Knowledge after training,Likelihood to recommend,0.32,1224
+Knowledge gained,Likelihood to call 988,0.2,282
+Knowledge gained,Likelihood to recommend,0.1,1224
+Knowledge before training,Likelihood to call 988,0.03,282
+Knowledge before training,Likelihood to recommend,0.11,1224

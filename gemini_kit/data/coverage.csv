@@ -1,0 +1,13 @@
+item,status,n,pct
+Likelihood to call 988,Answered,293,22.6
+Likelihood to call 988,Skipped,11,0.8
+Likelihood to call 988,Not on the form,995,76.6
+Presenter and organization ratings,Answered,1148,88.4
+Presenter and organization ratings,Skipped,31,2.4
+Presenter and organization ratings,Not on the form,120,9.2
+Recommend score,Answered,1266,97.5
+Recommend score,Skipped,33,2.5
+Recommend score,Not on the form,0,0.0
+Knowledge items,Answered,1299,100.0
+Knowledge items,Skipped,0,0.0
+Knowledge items,Not on the form,0,0.0
