@@ -702,7 +702,6 @@ def process_text(df: pd.DataFrame, cfg: dict, audit: Audit,
     cleaned_stage.attrs.clear()
     cleaned_stage.insert(0, "original_id", private["original_id"].tolist())
     cleaned_stage.insert(0, "source_row", source_rows)
-    censored_stage = cleaned_stage.copy()
     connected = privacy_adapter.is_connected()
     audit.privacy_tool = privacy_adapter.tool_name()
     report = {}
@@ -737,7 +736,6 @@ def process_text(df: pd.DataFrame, cfg: dict, audit: Audit,
         else:
             df[f"{c}__redacted"] = pd.Series(red, index=df.index).where(raw != "", None)
             df[f"{c}__privacy"] = np.where(raw != "", "redacted", "blank")
-            censored_stage[c] = df[f"{c}__redacted"].tolist()
 
         for position, (source_row, text, language) in enumerate(zip(source_rows, raw, lang)):
             replacement = red[position] if red is not None else ""
@@ -777,7 +775,6 @@ def process_text(df: pd.DataFrame, cfg: dict, audit: Audit,
     private.attrs["privacy_review"] = review
     private.attrs["privacy_summary"] = summarize_privacy(review, privacy_adapter.versions(), connected, language_routing)
     private.attrs["cleaned_stage"] = cleaned_stage
-    private.attrs["censored_stage"] = censored_stage if connected else pd.DataFrame()
     return df, private
 
 
@@ -968,17 +965,20 @@ class Result:
         review = self.private.attrs.pop("privacy_review", [])
         summary = self.private.attrs.pop("privacy_summary", {})
         cleaned = self.private.attrs.pop("cleaned_stage", pd.DataFrame())
-        censored = self.private.attrs.pop("censored_stage", pd.DataFrame())
         if self.cleaned_stage.empty:
             self.cleaned_stage = cleaned
-        if self.censored_stage.empty:
-            self.censored_stage = censored
         if self.privacy_review.empty:
             self.privacy_review = pd.DataFrame(review, columns=PRIVACY_REVIEW_COLUMNS)
         if not self.privacy_summary:
             self.privacy_summary = summary
         if self.privacy_summary:
             self.privacy_summary.update(data_rows=len(self.data), columns=len(self.data.columns))
+        if self.censored_stage.empty and self.privacy_summary.get("tool_connected"):
+            # Preserve John's complete result; linkage is the only schema addition.
+            self.censored_stage = self.data.copy()
+            self.censored_stage.attrs.clear()
+            self.censored_stage.insert(0, "original_id", self.private.original_id.tolist())
+            self.censored_stage.insert(0, "source_row", self.private.source_row.tolist())
 
 
 def run_pipeline(source, schema_path, registry_path=None, filename=None,

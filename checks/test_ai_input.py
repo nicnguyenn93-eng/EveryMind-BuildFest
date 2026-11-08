@@ -19,16 +19,23 @@ def synthetic():
             improve__category="substantive", improve__lang="en"))
         private.append(dict(response_id=str(i), most_valuable="Clear explanation of 988. PERSON_CANARY_728 jane@example.com",
             improve="Add a practice call scenario." if i % 20 < 10 else "Adjust the pacing."))
-    return pd.DataFrame(rows), pd.DataFrame(private)
+    data, private = pd.DataFrame(rows), pd.DataFrame(private)
+    data["source_row"] = range(2, len(data) + 2)
+    data["original_id"] = data.response_id
+    for field in ("most_valuable", "improve"):
+        data[field + "__redacted"] = private[field].str.replace("PERSON_CANARY_728 jane@example.com", "<PERSON> <EMAIL_ADDRESS>", regex=False)
+        data[field + "__privacy"] = "redacted"
+    return data, private
 
 
 def test_cleaning_adapter_and_aggregate_payload_no_text_or_identity():
     data, private = synthetic()
-    responses, comments = adapt_cleaned(data, private)
+    responses, comments = adapt_cleaned(data)
     result = build_ai_input(responses, comments, "test-key", "Students")
     text = json.dumps(result, allow_nan=False)
     assert "PERSON_CANARY" not in text and "jane@example.com" not in text
     assert "original_text" not in text and "response_id" not in text
+    assert not comments.original_text.str.contains("PERSON_CANARY|jane@example.com", regex=True).any()
     assert result["qualitative_themes"] == []
     improve = next(f for f in result["exploratory_feedback"] if f["source_field"] == "how_can_we_improve")
     scenario = next(t for t in improve["keyword_matches"] if t["theme_id"] == "THEME_SCENARIOS")
@@ -41,19 +48,19 @@ def test_cleaning_adapter_and_aggregate_payload_no_text_or_identity():
 def test_small_counts_categories_and_language_are_withheld():
     data, private = synthetic()
     # Only nine student scenario requests; the remainder has another topic.
-    private.loc[0, "improve"] = "Adjust the pacing."
-    responses, comments = adapt_cleaned(data, private)
+    data.loc[0, "improve__redacted"] = "Adjust the pacing."
+    responses, comments = adapt_cleaned(data)
     result = build_ai_input(responses, comments, "key", "Students")
     improve = result["exploratory_feedback"][1]
     assert not any(t["theme_id"] == "THEME_SCENARIOS" for t in improve["keyword_matches"])
     # One missing answer makes the whole disjoint category breakdown unsafe.
     data.loc[0, "improve__category"] = "blank"
-    responses, comments = adapt_cleaned(data, private)
+    responses, comments = adapt_cleaned(data)
     improve = build_ai_input(responses, comments, "key", "Students")["exploratory_feedback"][1]
     assert improve["categories"] is None
     # Patterns cannot classify Spanish comments as English thematic evidence.
     data["improve__lang"] = "es"
-    responses, comments = adapt_cleaned(data, private)
+    responses, comments = adapt_cleaned(data)
     improve = build_ai_input(responses, comments, "key")["exploratory_feedback"][1]
     assert improve["keyword_matches"] == [] and improve["scanned_denominator"] is None
 
@@ -61,5 +68,5 @@ def test_small_counts_categories_and_language_are_withheld():
 def test_entire_small_audience_returns_no_exploratory_counts():
     data, private = synthetic()
     data.loc[:8, "role_staff"] = True
-    responses, comments = adapt_cleaned(data, private)
+    responses, comments = adapt_cleaned(data)
     assert build_ai_input(responses, comments, "key", "School staff")["exploratory_feedback"] == []

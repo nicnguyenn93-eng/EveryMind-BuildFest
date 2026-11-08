@@ -38,6 +38,17 @@ def write_stage_outputs(result, root, source_path):
         "manifest": root / "reports" / key / "manifest.json",
         "guide": root / "README.md",
     }
+    archives = {}
+    if paths["censored"].is_file():
+        with paths["censored"].open(encoding="utf-8-sig", newline="") as handle:
+            previous_header = next(csv.reader(handle), [])
+        if {"most_valuable", "improve"} & set(previous_header):
+            fingerprint = hashlib.sha256(paths["censored"].read_bytes()).hexdigest()
+            archive = root / "archive" / "censoring_schema_v1" / key / fingerprint[:12]
+            for name in ("censored", "manifest", "guide"):
+                if paths[name].is_file():
+                    archives[f"archive_{name}"] = paths[name]
+                    paths[f"archive_{name}"] = archive / paths[name].name
     for name, path in paths.items():
         if not path.resolve().is_relative_to(root):
             raise ValueError("An output path escapes the configured data directory.")
@@ -46,12 +57,21 @@ def write_stage_outputs(result, root, source_path):
         if path.is_symlink() or (path.exists() and not path.is_file()):
             raise ValueError("Output paths must be regular files.")
     frames = {"cleaned": result.cleaned_stage, "censored": result.censored_stage}
-    if list(result.cleaned_stage.columns) != list(result.censored_stage.columns):
-        raise ValueError("Cleaned and censored stage columns must align.")
+    core = result.censored_stage.drop(columns=["source_row", "original_id"])
+    if not core.equals(result.data):
+        raise ValueError("Censored export must preserve John's complete result.")
     comment_fields = set(result.privacy_review.field)
     metadata = [c for c in result.cleaned_stage if c not in comment_fields]
     if not result.cleaned_stage[metadata].equals(result.censored_stage[metadata]):
         raise ValueError("Censoring changed non-comment fields.")
+    if comment_fields & set(result.censored_stage):
+        raise ValueError("Original comment fields must not appear in the censored export.")
+    for field in comment_fields:
+        review = result.privacy_review[result.privacy_review.field.eq(field)]
+        if (review.source_row.tolist() != result.censored_stage.source_row.tolist()
+                or review.normalized_input.tolist() != result.cleaned_stage[field].fillna("").tolist()
+                or review.redacted_text.tolist() != result.censored_stage[field + "__redacted"].fillna("").tolist()):
+            raise ValueError("Comment review does not align with the cleaned/censored stages.")
     root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".stages-", dir=root) as directory:
         temporary = Path(directory)
@@ -59,6 +79,12 @@ def write_stage_outputs(result, root, source_path):
         staged = {name: legacy[name] for name in (
             "audit", "review", "private_comments", "distress_review", "privacy_review", "privacy_summary"
         )}
+        for name, previous in archives.items():
+            payload = previous.read_bytes()
+            if paths[name].exists() and paths[name].read_bytes() != payload:
+                raise ValueError("An existing archive differs; no results published.")
+            staged[name] = temporary / (name + previous.suffix)
+            staged[name].write_bytes(payload)
         if not source_is_raw:
             staged["raw_source"] = temporary / ("source" + source.suffix)
             staged["raw_source"].write_bytes(source_bytes)
@@ -73,12 +99,15 @@ def write_stage_outputs(result, root, source_path):
                     raise ValueError("Stage CSV verification failed.")
             stages.append({"stage": name, "path": str(paths[name].relative_to(root)),
                            "rows": len(frame), "columns": len(frame.columns),
+                           "column_names": list(frame.columns),
+                           "column_types": {column: str(dtype) for column, dtype in frame.dtypes.items()},
                            "sha256": hashlib.sha256(staged[name].read_bytes()).hexdigest()})
         manifest = {
+            "schema_version": "everymind.stages.v2",
             "dataset_key": key, "source_sha256": source_sha,
             "stages": stages, "linkage_columns": ["source_row", "original_id", "response_id"],
             "cleaned_comments": "normalized original comments before Presidio",
-            "censored_comments": "same columns; only comment values replaced",
+            "censored_comments": "John's full result; comments in __redacted columns, with source-row and original-ID linkage",
             "outputs": {name: str(path.relative_to(root)) for name, path in paths.items()},
             "review_required": True,
         }
@@ -92,7 +121,7 @@ def write_stage_outputs(result, root, source_path):
         descriptions = {
             "raw": "Original source file",
             "cleaned": "John's cleaned values with normalized, uncensored comments",
-            "censored": "Same columns as cleaned; comment values replaced by Presidio",
+            "censored": "John's full result with Presidio text, classification, quality flags, derived fields, and linkage",
         }
         for number, stage in enumerate(stages):
             guide.append(f"| {number} | {descriptions[stage['stage']]} | [{stage['path']}]({stage['path']}) |")
