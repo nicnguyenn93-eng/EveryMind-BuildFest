@@ -18,6 +18,14 @@ cleaned values, verbatim originals, row linkage, and source hashes. CSV/workbook
 results match. A complete real-model workbook run used blocked network, model
 downloads, and GPU activation. Identical-input replay of its detections was used
 for subsequent format parity checks, avoiding duplicate model inference.
+After incorporating the censored-analysis integration, the same comparison
+passes with the 51-column cleaned checkpoint and 77-column censored result.
+Analysis reads the language-fixed export successfully with raw/private-original
+file access and network connections blocked (15 quantitative evidence rows).
+Final combined verification: **106 tests and 67 subtests passed**, including
+John's ten real-data cleaning checks and installed-model checks. Runtime DNS and
+socket connections were blocked throughout the combined test run. The isolated
+environment also passes `pip check`.
 
 | Routing measure | Previous heuristic | Lingua routing |
 | --- | ---: | ---: |
