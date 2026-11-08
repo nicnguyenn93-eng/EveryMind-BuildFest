@@ -110,3 +110,69 @@ def summarize_themes(responses, private_comments, reviews, dataset_key, audience
                 caveat="Reviewed comments only; multiple themes per response allowed. Not population prevalence." +
                        (" Limited reviewed sample (10-29)." if reviewed < 30 else "")))
     return output
+
+
+def explore_feedback(responses, private_comments, dataset_key, audience="All respondents"):
+    """Aggregate local classifications and UNREVIEWED English keyword matches.
+
+    Private input rows need response_id, source_field, original_text,
+    response_category and language. Only fixed codebook labels/counts leave here.
+    """
+    from analysis import validate_responses, audience_mask, publishable, MIN_VALID
+    frame = validate_responses(responses)
+    selected = audience_mask(frame, audience)
+    if not publishable(pd.Series(True, index=frame.index), selected):
+        return []
+    local_ids = set(frame.loc[selected, "id"])
+    ids = set(frame.id)
+    records = pd.DataFrame(private_comments).to_dict("records") if private_comments is not None else []
+    seen = set()
+    for row in records:
+        identity = (str(row.get("response_id")), row.get("source_field"))
+        if identity in seen:
+            raise ValueError("Duplicate exploratory comment record.")
+        seen.add(identity)
+    def safe(n, total):
+        return (n == 0 or n >= MIN_VALID) and not 0 < total-n < MIN_VALID
+    output = []
+    for field in FIELDS:
+        available = [r for r in records if r.get("source_field") == field and str(r.get("response_id")) in ids]
+        local = [r for r in available if str(r["response_id"]) in local_ids]
+        if not available:
+            output.append(dict(source_field=field, status="absent"))
+            continue
+        categories = ("blank", "unclear", "none_stated", "substantive")
+        counts = {c: sum(r.get("response_category") == c for r in local) for c in categories}
+        category_allowed = (sum(counts.values()) == len(local) and
+            all(safe(n, len(local)) for n in counts.values()) and
+            all(not 0 < sum(r.get("response_category") == c and str(r["response_id"]) not in local_ids for r in available) < MIN_VALID for c in categories))
+        # English-only patterns cannot estimate prevalence among other languages.
+        eligible = [r for r in available if r.get("response_category") == "substantive" and r.get("language") in ("en", "English")]
+        scanned = [r for r in eligible if str(r["response_id"]) in local_ids]
+        complement_n = len(eligible)-len(scanned)
+        release = len(scanned) >= MIN_VALID and not 0 < complement_n < MIN_VALID
+        matches = []
+        for theme in CODEBOOK:
+            if field not in theme["source_fields"] or not theme["patterns"] or theme["category"] in ("No Suggested Change", "Unclear"):
+                continue
+            def matched(r):
+                text = r.get("original_text")
+                return isinstance(text, str) and any(re.search(p, text, re.IGNORECASE) for p in theme["patterns"])
+            n = sum(matched(r) for r in scanned)
+            other = sum(matched(r) for r in eligible if str(r["response_id"]) not in local_ids)
+            if not release or n < MIN_VALID or not safe(n, len(scanned)) or 0 < other < MIN_VALID:
+                continue
+            matches.append(dict(theme_id=theme["theme_id"], name=theme["name"], count=n,
+                scanned_denominator=len(scanned), review_status="unreviewed_keyword_match",
+                percent_of_scanned=100*n/len(scanned)))
+        output.append(dict(dataset_key=dataset_key, audience=audience, source_field=field,
+            status="exploratory", classification_method="local_rule_based_unreviewed",
+            categories=counts if category_allowed else None,
+            categories_status="available" if category_allowed else "withheld",
+            scanned_denominator=len(scanned) if release else None,
+            keyword_matches=matches,
+            limitations=["English keyword matches in substantive responses only; other languages are not analyzed by these patterns.",
+                         "Negation, context, synonyms and sarcasm can cause errors; no match is not evidence of no theme.",
+                         "These are unreviewed exploratory signals, not verified themes, prevalence, causes, or action eligibility.",
+                         "Small positive counts and complements are withheld; withheld is not zero."]))
+    return output

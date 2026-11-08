@@ -1,5 +1,32 @@
 # Analysis handoff on nic-branch
 
+## Single JSON input for the AI owner
+
+Run `cleaned_analysis.py` to execute John's cleaner, map its cleaned contract, and create one aggregate-only JSON file. From Git Bash at the repository root:
+
+```bash
+python cleaned_analysis.py "C:/Users/nickn/Downloads/BuildFest_EveryMind_Survey_Data_FULL.xlsx" \
+  --audience "All respondents" \
+  --output everymind_cleaning/outputs/ai_input.json
+```
+
+Use `--audience Students` for student evidence. Optionally supply `--reviews path/to/local_reviews.json` for genuine approved reviews that match John's current private text fingerprints. Do not use the synthetic review file for real data. This runner does not send anything externally and does not write original comments. Keep generated real-data output in the ignored outputs directory.
+
+The payload has a stable `schema_version`, current dataset key/audience, quantitative evidence, approved `qualitative_themes`, and separate `exploratory_feedback`. The latter contains field-specific rule-based category counts and unreviewed English keyword matches in substantive comments. Category breakdowns and positive keyword counts/complements below ten are withheld. An empty result does not mean that no such themes exist. Review sampling, meaning verification, other languages, negation, and privacy screening still need human work.
+
+For integration in Python:
+
+```python
+from pathlib import Path
+from cleaned_analysis import run
+payload = run(Path("path/to/survey.xlsx"), audience="Students")
+# AI owner serializes this whole object into their provider's input:
+import json
+provider_input_text = json.dumps(payload, ensure_ascii=False, allow_nan=False)
+```
+
+No raw text, redacted text, paraphrases, respondent IDs, input filenames, distress flags, or credentials are included. Codebook names are fixed project labels, not extracted snippets. `interpretation_rules` explicitly prohibit treating unreviewed signals as verified prevalence, causal explanations, recommendation eligibility, or statistical significance. The AI owner must preserve these distinctions and validate its response. This interface supplies evidence; it neither calls AI nor selects recommendations.
+
 `analysis.py` owns descriptive statistics and the combined analysis object. `feedback.py` owns local coding suggestions and reviewed thematic counts. Neither module calls an LLM or chooses actions. `metrics.py` is a compatibility import pointing to `analysis.build_evidence`; it contains no competing calculations. The current Streamlit interface remains a separate mock and has not been wired to these modules.
 
 ## Input contract with John
