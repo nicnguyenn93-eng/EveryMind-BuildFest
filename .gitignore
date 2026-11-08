@@ -29,3 +29,4 @@ models/
 .k3-build/
 node_modules/
 *.inspect.ndjson
+gemini_kit/results/

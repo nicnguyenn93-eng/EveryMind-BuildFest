@@ -17,6 +17,28 @@ Asks Google Gemini to analyze the cleaned survey data **on its own**, then compa
 
 ## Run it
 
+### Use nic-branch's current cleaned-analysis payload
+
+The legacy kit reads CSV tables. The new `--payload` adapter accepts `everymind.analysis.v2` JSON and converts only the current payload into in-memory citation tables. It does not mix in the bundled 1,255-response analysis or its human findings. Payload mode defaults to blind stage only; comparison mode is blocked until a current-cohort human comparison is integrated.
+
+From Git Bash at the repository root, inspect the exact request without any API call:
+
+```bash
+python gemini_kit/run_gemini.py \
+  --payload everymind_cleaning/outputs/ai_input.json \
+  --dry-run --out everymind_cleaning/outputs/gemini_dry_run
+```
+
+Open `everymind_cleaning/outputs/gemini_dry_run/prompt_stage1.txt`. Quantitative rows are cited by `evidence_id`; approved theme rows by `source_field` plus `theme_id`. Withheld counts are not restored. Keyword signals remain explicitly exploratory. The current single-audience payload has no county/session/trend/correlation/NPS/robustness tables; the prompt must state those gaps rather than invent them. This is sufficient for a narrower descriptive summary, not all questions the legacy kit can ask.
+
+Approved paraphrases are excluded by default to preserve this kit's aggregate-only/free-account workflow. If privacy-screened approvals exist and the chosen provider/account terms permit that content, explicitly add `--include-approved-comments`; then `approved_comment_evidence` is a citable table keyed by opaque `comment_evidence_id`. Original comments and the private lineage map are never included. The current real-data payload has no approved paraphrases, so it cannot yet support semantic summaries of what respondents meant.
+
+After reviewing the dry run, install `gemini_kit/requirements.txt`, choose a model available to your account using `--model`, configure the key privately, and remove `--dry-run` to make a real call. No live provider/model/account verification is implied by a successful dry run. The supplied default model name has not been verified in this integration. A real run sends data externally and may incur account usage charges.
+
+Citation checks now require one uniquely identified row and the actual supplied numeric value (not the previous 1% tolerance). They validate cited table cells; they do not establish that prose, causal claims, uncited numbers, recommendations, or predictions are correct. Human review and stronger report validation remain necessary.
+
+### Legacy bundled-table workflow
+
 1. Get a free API key at <https://aistudio.google.com/apikey>.
 2. Install Python 3.10 or newer, then in this folder:
    ```

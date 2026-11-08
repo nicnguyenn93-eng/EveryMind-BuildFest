@@ -38,10 +38,10 @@ Each respondent answered (wording abridged):
 2. Three knowledge statements rated 1–5 (Strongly disagree … Strongly agree), once for "after the training" and once for "before the training" (recalled): *I can identify mental health challenges and crises*; *I can describe 988 and how it works*; *I know when to use 988*.
 3. Three delivery statements rated 1–5: the presenter engaged participants; knew the subject well; the training was well organized. (Not on every form version.)
 4. "How likely are you to recommend this training?" 0–10 (used for NPS).
-5. "How likely are you to call 988 if you or someone else is in a crisis?" 0–10. **This was only on some form versions; about 23% of respondents were asked.** Treat it as a smaller, possibly non-representative sample.
+5. "How likely are you to call 988 if you or someone else is in a crisis?" 0–10. Use the provided answer coverage. Answer coverage alone does not establish who was asked; form-version conclusions require separate evidence. Treat the valid-answer sample as possibly non-representative.
 6. Two open questions: the most valuable thing learned, and how to improve the training (many used this box to ask questions).
 
-The data was cleaned before you received it: 1,299 responses, of which 1,255 form the analysis set (speeders, likely duplicates and self-contradictory answers removed). You receive only aggregate tables. Groups smaller than 10 people were removed.
+The data was cleaned before you received it. Read the current scope and denominators from the supplied tables; do not assume a fixed cohort size or that quality-flagged records were excluded. The current-payload workflow retains flagged records in the primary analysis. Privacy rules may withhold small groups/counts; absence is not zero. Approved comment evidence, when explicitly enabled, is an illustrative privacy-screened sample, not a prevalence estimate.
 
 # Rules
 
