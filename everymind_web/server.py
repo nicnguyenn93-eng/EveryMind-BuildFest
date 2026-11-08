@@ -14,7 +14,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 import analysis
 from report import DEFAULT_MODEL
-from censored_comment_evidence import INPUT_POLICY
+from censored_comment_evidence import INPUT_POLICY, build_censored_comment_evidence
 from report_service import generate_report, ReportServiceError
 from .store import DatasetError, DatasetStore, StaleDatasetError
 
@@ -125,7 +125,17 @@ def create_app(*, private_root=None, store=None, reporter=generate_report, key_l
         result = reporter(export.path, request.audience,
             expected_dataset_key=request.expected_dataset_key, use_llm=request.use_llm, include_censored_comments=True,
             api_key=key_loader(root), model=DEFAULT_MODEL, retries=2)
-        return dict(scope="All surveyed locations · " + request.audience, report=result)
+        cited = set(result.get("evidence_ids", []))
+        for item in result.get("summary", []) + result.get("proposed_recommendations", []):
+            cited.update(item.get("evidence_ids", []))
+        # Only the cited censored wording reaches the action cards. The dashboard
+        # stays aggregate-only and no source IDs or original-comment sidecars enter it.
+        fields = ("comment_evidence_id", "source_field", "language", "censored_text", "review_status")
+        comments = [{name: item[name] for name in fields}
+                    for item in build_censored_comment_evidence(export, request.audience)
+                    if item["comment_evidence_id"] in cited]
+        return dict(scope="All surveyed locations · " + request.audience, report=result,
+                    cited_comment_evidence=comments)
 
     # Only public frontend assets are served. No repository/private-data mount.
     app.mount("/", StaticFiles(directory=ROOT / "frontend", html=True), name="frontend")

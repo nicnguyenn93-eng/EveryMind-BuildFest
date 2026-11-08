@@ -600,7 +600,7 @@ footer .wrap { display:grid; gap:var(--gap-sm); }
 .dk-btn.pri { background:var(--em-teal-deep); color:#fff; } .dk-btn.pri:hover { background:var(--em-teal-ink); }
 .dk-btn.ghost { border-color:var(--em-line); color:var(--em-body); }
 .dk-face dl { margin:0; display:grid; grid-template-columns:auto minmax(0,1fr); gap:.35rem .8rem; font-size:.84rem; }
-.dk-face dt { font-weight:600; color:var(--em-teal-ink); } .dk-face dd { margin:0; }
+.dk-face dt { font-weight:600; color:var(--em-teal-ink); } .dk-face dd { margin:0; min-width:0; overflow-wrap:anywhere; }
 .dk-face ul { margin:0; padding-left:1.1rem; font-size:.88rem; display:grid; gap:.5rem; }
 .dk-nav { display:flex; align-items:center; justify-content:center; gap:var(--gap-md); }
 .dk-dots { display:flex; gap:.4rem; }
@@ -670,13 +670,13 @@ footer .wrap { display:grid; gap:var(--gap-sm); }
 </style>
 <script>
 /* ---- analysis deck: which test, which columns, which chart ---- */
-const DK_PAIR_COLS = [[/identify/i, ['q1_knowledge', 'q2_knowledge']], [/explain/i, ['q3_knowledge', 'q4_knowledge']], [/when to use/i, ['q5_knowledge', 'q6_knowledge']]];
+const DK_PAIR_COLS = [[/identify/i, ['q1_knowledge', 'q2_knowledge']], [/explain|describe/i, ['q3_knowledge', 'q4_knowledge']], [/when to use/i, ['q5_knowledge', 'q6_knowledge']]];
 const DK_TESTS = {  // metric_type -> what was done; `cols` resolves the columns from the question text
   paired_agreement: { name: 'Paired before / after agreement', how: 'Agree = 4 or 5 on the 5-point scale, counted only where the respondent answered both the recalled-before and post-training items.', cols: (q) => (DK_PAIR_COLS.find(([re]) => re.test(q)) || [0, []])[1] },
   paired_agreement_change: { name: 'Paired before / after agreement', how: 'Post agreement minus recalled-before agreement, in percentage points, on the same paired respondents.', cols: (q) => (DK_PAIR_COLS.find(([re]) => re.test(q)) || [0, []])[1] },
-  mean: { name: 'Mean score (0 to 10)', how: 'Average of valid 0 to 10 answers; blanks are excluded, zero counts.', cols: (q) => [/intent/i.test(q) ? 'intent' : 'recommendation'] },
-  answer_coverage: { name: 'Answer coverage', how: 'Share of the audience that gave a valid answer to this item.', cols: (q) => [/intent/i.test(q) ? 'intent' : 'recommendation'] },
-  score_distribution: { name: 'Score distribution', how: 'Share of valid answers at each score from 0 to 10. Shown only when no bar is small enough to identify anyone.', cols: (q) => [/intent/i.test(q) ? 'intent' : 'recommendation'] },
+  mean: { name: 'Mean score (0 to 10)', how: 'Average of valid 0 to 10 answers; blanks are excluded, zero counts.', cols: (q) => [/intent|call/i.test(q) ? 'intent' : 'recommendation'] },
+  answer_coverage: { name: 'Answer coverage', how: 'Share of the audience that gave a valid answer to this item.', cols: (q) => [/intent|call/i.test(q) ? 'intent' : 'recommendation'] },
+  score_distribution: { name: 'Score distribution', how: 'Share of valid answers at each score from 0 to 10. Shown only when no bar is small enough to identify anyone.', cols: (q) => [/intent|call/i.test(q) ? 'intent' : 'recommendation'] },
   neutral_on_either: { name: 'Neutral on either item', how: 'Respondents at the scale midpoint on the post-training explain or when-to-use item. Disagreement is counted separately.', cols: () => ['q4_knowledge', 'q6_knowledge'] },
   not_agree_on_either: { name: 'Below agreement on either item', how: 'Neutral or disagree on the post-training explain or when-to-use item.', cols: () => ['q4_knowledge', 'q6_knowledge'] },
   audience_comparison: { name: 'Audience comparison', how: 'Descriptive difference between two non-overlapping groups. No significance test.', cols: () => [] },
@@ -742,7 +742,7 @@ function dkThemes(rows) {
     const p = r.percent_of_reviewed != null ? r.percent_of_reviewed : r.reviewed_denominator ? 100 * r.theme_positive / r.reviewed_denominator : 0;
     const f = el('figure'); f.append(dkShare(r.theme_positive, r.reviewed_denominator, i % 2 ? 'var(--em-amber)' : 'var(--em-teal)',
       `${r.theme_positive} of ${r.reviewed_denominator} reviewed`, `${r.theme || r.theme_id}: ${dkF(p, 0)}% of reviewed comments`));
-    f.append(el('figcaption', null, `<b>${esc(r.theme || r.theme_id || 'Theme')}</b>${r.approved_paraphrase ? ` · “${esc(r.approved_paraphrase)}”` : ''}`)); out.append(f);
+    f.append(htmlEl('figcaption', null, `<b>${esc(r.theme || r.theme_id || 'Theme')}</b>${r.approved_paraphrase ? ` · “${esc(r.approved_paraphrase)}”` : ''}`)); out.append(f);
   });
   return out;
 }
@@ -768,7 +768,7 @@ function dkEv(ids, map) {
 /* Quotes: each censored comment as a pull-quote, tagged with the column it came from. */
 function dkQuotes(rows) {
   const out = el('div', 'dk-quotes');
-  rows.slice(0, 2).forEach((r) => out.append(el('blockquote', null, `“${esc(r.text)}”<cite>${esc(String(r.source_field || '').replace(/_/g, ' '))}${r.language ? ' · ' + (r.language === 'es' ? 'Spanish' : 'English') : ''}${r.tag ? ' · ' + esc(r.tag) : ''}</cite>`)));
+  rows.slice(0, 2).forEach((r) => out.append(htmlEl('blockquote', null, `“${esc(r.text)}”<cite>${esc(String(r.source_field || '').replace(/_/g, ' '))}${r.language ? ' · ' + (r.language === 'es' ? 'Spanish' : 'English') : ''}${r.tag ? ' · ' + esc(r.tag) : ''}</cite>`)));
   return out;
 }
 /* Evidence rows for one card -> [{test, cols, ids, n, caveat, node}], one chart per test family. */
@@ -776,15 +776,15 @@ function dkCharts(rows) {
   const of = (...t) => rows.filter((r) => t.includes(dkType(r))), out = [];
   const add = (src, node, cap) => out.push({ test: dkTest(src[0]), cols: [...new Set(src.flatMap(dkCols))], ids: src.map((r) => r.evidence_id),
     n: Math.max(0, ...src.map((r) => r.valid_denominator || r.group_valid_n || r.reviewed_denominator || 0)), caveat: [...new Set(src.map((r) => r.caveat).filter(Boolean))], node, cap });
-  let pr = of('paired_agreement', 'paired_agreement_change');
-  if (pr.length) { const stem = pr[0].evidence_id.replace(/_(BEFORE|POST|CHANGE)$/i, ''); pr = Object.values(DK.map || {}).filter((r) => r.evidence_id.replace(/_(BEFORE|POST|CHANGE)$/i, '') === stem && /^paired_agreement/.test(r.metric_type)); }
-  if (pr.length) {
+  const pairStems = [...new Set(of('paired_agreement', 'paired_agreement_change').map((r) => r.evidence_id.replace(/_(BEFORE|POST|CHANGE)$/i, '')))];
+  pairStems.forEach((stem) => {
+    const pr = Object.values(DK.map || {}).filter((r) => r.evidence_id.replace(/_(BEFORE|POST|CHANGE)$/i, '') === stem && /^paired_agreement/.test(r.metric_type));
     const b = pr.find((r) => /BEFORE$/i.test(r.evidence_id)), p = pr.find((r) => /POST$/i.test(r.evidence_id)), c = pr.find((r) => r.metric_type === 'paired_agreement_change');
     const bv = b ? b.value : c && c.post_agree != null ? 100 * c.before_agree / c.valid_denominator : null, pv = p ? p.value : c && c.post_agree != null ? 100 * c.post_agree / c.valid_denominator : null;
     if (bv != null && pv != null) add(pr, dkDumbbell(bv, pv, 'Before', 'After', c ? `${c.value >= 0 ? '+' : ''}${dkF(c.value)} pp` : `${pv - bv >= 0 ? '+' : ''}${dkF(pv - bv)} pp`, `Agreement rose from ${dkF(bv)}% to ${dkF(pv)}%`),
       `${dkLabel(pr[0].survey_question)}: share who agree, recalled before vs after the training`);
     else pr.forEach((r) => add([r], dkShare(r.value, 100, 'var(--em-teal)', esc(r.display_value || ''), r.survey_question), r.survey_question));
-  }
+  });
   of('mean').forEach((r) => add([r], dkMean(r.value, r.valid_denominator, null), `${dkLabel(r.survey_question)} (0 to 10), ${r.valid_denominator} valid answers`));
   if (of('score_distribution').length) { const q = of('score_distribution')[0].survey_question, all = Object.values(DK.map || {}).filter((r) => r.metric_type === 'score_distribution' && r.survey_question === q);
     add(all.length ? all : of('score_distribution'), dkHist(all.length ? all : of('score_distribution')), 'Share of answers at each score'); }
@@ -810,8 +810,10 @@ function dkBuild() {
   const cards = (rep.proposed_recommendations || []).map((r) => {
     const own = new Set(r.evidence_ids), paired = finds.filter((f) => f.evidence_ids.some((i) => own.has(i)));
     const ids = [...new Set([...r.evidence_ids, ...paired.flatMap((f) => f.evidence_ids)])];
-    return { kind: 'Proposed action', title: r.proposed_action || r.pilot, sub: r.proposed_action ? r.pilot : '', finds: paired.map((f) => f.text), ids, rows: dkEv(ids, ev), rec: r };
-  }).filter((c) => c.rows.length).map((c, k) => ({ ...c, pick: k }));
+    return { kind: 'Proposed action', title: r.proposed_action || r.pilot, sub: r.proposed_action && r.pilot !== r.proposed_action ? r.pilot : '', finds: paired.map((f) => f.text), ids, rows: dkEv(ids, ev), rec: r };
+  }).map((c, k) => ({ ...c, pick: k }));
+  if (!cards.length) finds.forEach((f) => cards.push({ kind: 'Finding', title: f.text,
+    finds: [], ids: f.evidence_ids || [], rows: dkEv(f.evidence_ids || [], ev) }));
   const lim = [].concat(rep.limitations || []);
   if (cards.length && lim.length) cards.push({ kind: 'Limits', title: 'What this does not show', lim, ids: [], rows: [] });
   return cards;
@@ -823,20 +825,21 @@ function dkRecs() {  // the existing RECS shape, from the report's recommendatio
 function dkFace(c) {
   const face = el('div', 'dk-face'), L = el('div', 'dk-l'), R = el('div', 'dk-r');
   const charts = dkCharts(c.rows).sort((x, y) => dkRank(x) - dkRank(y)).slice(0, 2);
-  L.append(el('span', 'dk-kind', c.kind), el('h3', null, esc(c.title)));
-  if (c.sub) L.append(el('p', 'dk-sub', esc(c.sub)));
-  (c.finds || []).slice(0, 1).forEach((t) => L.append(el('p', 'dk-find', `<span>The data</span>${esc(t)}`)));
+  L.append(el('span', 'dk-kind', c.kind), el('h3', null, c.title));
+  if (c.sub) L.append(el('p', 'dk-sub', c.sub));
+  (c.finds || []).slice(0, 1).forEach((t) => L.append(htmlEl('p', 'dk-find', `<span>The data</span>${esc(t)}`)));
   const B = el('div', 'dk-b');
-  if (c.rec) { const dl = el('dl', 'dk-plan'); [['Owner', c.rec.staff_owner || c.rec.proposed_staff_owner], ['How we will know', c.rec.follow_up_measure]].forEach(([k, v]) => { const d = el('div'); d.append(el('dt', null, k), el('dd', null, esc(v))); dl.append(d); }); B.append(dl); }
-  if (c.lim) { const ul = el('ul'); c.lim.forEach((t) => ul.append(el('li', null, esc(t)))); L.append(ul); }
-  if (charts.length) { const box = el('div', 'dk-chart'); charts.forEach((ch) => { const f = el('figure'); f.append(ch.node); box.append(f); }); R.append(box);
+  if (c.rec) { const dl = el('dl', 'dk-plan'); [['Owner', c.rec.staff_owner || c.rec.proposed_staff_owner], ['How we will know', c.rec.follow_up_measure]].forEach(([k, v]) => { const d = el('div'); d.append(el('dt', null, k), el('dd', null, v)); dl.append(d); }); B.append(dl); }
+  if (c.lim) { const ul = el('ul'); c.lim.forEach((t) => ul.append(el('li', null, t))); L.append(ul); }
+  if (charts.length) { const box = el('div', 'dk-chart'); charts.forEach((ch) => { const f = el('figure'); f.append(ch.node, el('figcaption', null, ch.cap)); box.append(f); }); R.append(box);
   }
   const act = el('div', 'dk-act');
   if (charts.length || c.rec) {
     const how = el('details', 'dk-how'), body = el('div', 'dk-howbody'); how.append(el('summary', null, 'How we know'), body);
     charts.forEach((ch) => { const dl = el('dl'); [['Shows', ch.cap], ['What it does', ch.test.how], ['Columns', ch.cols.join(', ') || 'derived'], ...(ch.n ? [['Valid n', n0(ch.n)]] : []), ['Evidence', ch.ids.join(', ')], ['Caveat', ch.caveat.join(' ') || 'None stated']]
-      .forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, esc(v)))); body.append(dl); });
-    if (c.rec) { const dl = el('dl'); [['What we are unsure of', c.rec.uncertainty]].forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, esc(v)))); body.append(dl); }
+      .forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, v))); body.append(dl); });
+    if (c.rec) { const dl = el('dl'); [['What we are unsure of', c.rec.uncertainty], ['Cited evidence', c.ids.join(', ')]]
+      .forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, v))); body.append(dl); }
     act.append(how);
   }
   if (c.rec) { const b = el('button', 'dk-btn', ''); b.type = 'button'; b.dataset.pick = c.pick; act.prepend(b); }
@@ -854,7 +857,7 @@ function renderDeck() {
   if (!DK.cards.length) { renderActionsPlain(); return; }
   DK.i = Math.min(DK.i, DK.cards.length - 1); host.replaceChildren();
   const rep = (DATA.report || {}).report || DATA.report;
-  const top = el('div', 'dk-top', `<span id="dk-pos"></span><b id="dk-sel"></b>${rep.demo || (DATA.report || {}).demo ? '<span class="dk-demo">Demo data, not the real analysis</span>' : `<span>${rep.mode === 'llm' ? 'AI-written, checked against the evidence' : rep.mode === 'template' ? 'Template summary' : ''}</span>`}`);
+  const top = htmlEl('div', 'dk-top', `<span id="dk-pos"></span><b id="dk-sel"></b>${rep.demo || (DATA.report || {}).demo ? '<span class="dk-demo">Demo data, not the real analysis</span>' : `<span>${rep.mode === 'llm' ? 'AI-written · citations checked · staff review required' : rep.mode === 'template' ? 'Template summary · staff review required' : ''}</span>`}`);
   const stage = el('div', 'dk-stage'); stage.setAttribute('role', 'group'); stage.setAttribute('aria-roledescription', 'carousel');
   DK.nodes = DK.cards.map((c) => { const n = el('div', 'dk-card' + (c.rec ? ' act' : '')); n.append(...dkFace(c)); stage.append(n); return n; });
   const prev = el('button', 'dk-arrow', '←'), next = el('button', 'dk-arrow', '→'), dots = el('div', 'dk-dots'), nav = el('div', 'dk-nav');
@@ -895,11 +898,21 @@ function renderActionsPlain() {
   const ul = el('ul', 'ac-list'); host.append(ul);
   RECS.forEach((r, i) => { const li = el('li', 'ac-item' + (PICKED.has(i) ? ' on' : '')), lab = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.checked = PICKED.has(i);
     cb.onchange = () => { cb.checked ? PICKED.add(i) : PICKED.delete(i); li.classList.toggle('on', cb.checked); countActions(); };
-    lab.append(cb, el('b', null, esc(r.title)), el('span', 'sub', esc(r.what))); li.append(lab); ul.append(li); });
+    lab.append(cb, el('b', null, r.title), el('span', 'sub', r.what)); li.append(lab); ul.append(li); });
   countActions();
 }
 /* Hook for the real pipeline: setReport({scope, report}, analysisPayload) re-renders the deck. */
-function setReport(resp, payload) { DATA.report = resp; DATA.payload = payload || {}; RECS = dkRecs(); PICKED.clear(); DK.i = 0; renderDeck(); }
+function setReport(resp, payload) {
+  const rep = { ...(resp.report || resp) };
+  if (!rep.summary?.length) rep.summary = (rep.summary_blocks || []).map((text) => ({ text, evidence_ids: rep.evidence_ids || [] }));
+  if (!rep.proposed_recommendations?.length && rep.mode === 'template' && rep.proposed_action) {
+    rep.proposed_recommendations = [{ action_id: rep.proposed_action_id, proposed_action: rep.proposed_action,
+      pilot: 'Catalog suggestion for staff review.', evidence_ids: rep.evidence_ids || [], staff_owner: rep.staff_owner,
+      follow_up_measure: rep.follow_up_measure, uncertainty: 'Catalog template suggestion. Its effectiveness has not been tested by this report.' }];
+  }
+  DATA.report = resp.report ? { ...resp, report: rep } : rep; DATA.payload = payload || {};
+  RECS = dkRecs(); PICKED.clear(); DK.i = 0; renderDeck();
+}
 </script>
 
 <footer>
@@ -967,8 +980,10 @@ const CUBE = (county, role) => find('cube', (r) => r.split_dim === 'none' && r.c
 const n0 = (x) => Number(x).toLocaleString('en-US');
 const pct = (x, d = 1) => Number(x).toFixed(d) + '%';
 const sgn = (x, d = 1) => (Number(x) > 0 ? '+' : '') + Number(x).toFixed(d);
-const el = (tag, cls, html) => { const e = document.createElement(tag);
-  if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const el = (tag, cls, text) => { const e = document.createElement(tag);
+  if (cls) e.className = cls; if (text != null) e.textContent = String(text); return e; };
+// Markup is explicit and limited to our templates; imported text uses el's textContent.
+const htmlEl = (tag, cls, html) => { const e = el(tag, cls); e.innerHTML = html; return e; };
 const clear = (id) => { const e = document.getElementById(id); e.replaceChildren(); return e; };
 
 /* ============================================================
@@ -1285,8 +1300,8 @@ function renderCheck() {
   const card = clear('check-body');
   const title = document.getElementById('check-title');
   const dl = el('dl');
-  const B = (t) => `<b>${t}</b>`;
-  const add = (k, ...v) => dl.append(el('dt', null, k), el('dd', null, v.join('')));
+  const B = (t) => el('b', null, t);
+  const add = (k, ...v) => { const value = el('dd'); value.append(...v); dl.append(el('dt', null, k), value); };
   let ok = true, note;
   if (info) {
     ok = !info.missing.length;
@@ -1409,9 +1424,9 @@ const STRATA = [
     pick: () => cubeWhere((r) => r.split_dim === 'none' && r.county === ALL && r.role !== ALL).map((r) => ({ label: r.role, r })) },
   { key: 'county', label: 'County', hint: 'Where the training was',
     pick: () => cubeWhere((r) => r.split_dim === 'none' && r.role === ALL && r.county !== ALL).map((r) => ({ label: r.county, r })) },
-  { key: 'language', label: 'Language', hint: 'English or Spanish speakers',
+  { key: 'language', label: 'Language', hint: 'English or Spanish forms',
     pick: () => cubeWhere((r) => r.split_dim === 'language' && r.county === ALL && r.role === ALL).map((r) => ({ label: r.split_val, r })) },
-  { key: 'quarter', label: 'Quarter', hint: 'When they answered', chrono: true,
+  { key: 'quarter', label: 'Quarter', hint: 'When training took place', chrono: true,
     pick: () => cubeWhere((r) => r.split_dim === 'quarter' && r.county === ALL && r.role === ALL).map((r) => ({ label: r.split_val, r })) },
 ];
 const PZ = { spin: false, stratum: null, slices: [], bounds: [0, 360], rot: 0, raf: 0, sel: null };
@@ -1423,13 +1438,16 @@ const PZ_EXN = 0;   // the live adapter excludes nothing, so there is no hatched
 
 function pzSlices(st) {
   const all = st.pick().sort((a, b) => st.chrono ? qKey(a.label) - qKey(b.label) : b.r.n - a.r.n);
-  const big = all.filter((d) => d.r.n >= 10), tiny = all.filter((d) => d.r.n < 10);
-  const denom = all.reduce((t, d) => t + d.r.n, 0), raw = denom + PZ_EXN;
-  const out = big.map((d, i) => ({ label: d.label, r: d.r, n: d.r.n, share: d.r.n / denom, drawn: d.r.n / raw, color: PZ_COLORS[i % PZ_COLORS.length] }));
-  if (tiny.length) { const n = tiny.reduce((t, d) => t + d.r.n, 0);
-    out.push({ label: 'Under 10', tiny: tiny.map((d) => d.label), share: n / denom, drawn: n / raw, color: PZ_GREY }); }
-  // the drawn share has a floor so nothing is a sliver; hover always reports the true figure
-  const draw = out.map((x) => Math.max(PZ_MIN, x.drawn)), sum = draw.reduce((t, v) => t + v, 0);
+  const big = all.filter((d) => Number.isFinite(d.r.n) && d.r.n >= 10), denom = pzTotal.n;
+  if (!Number.isFinite(denom) || denom < 10) return { slices: [], bounds: [0, 360] };
+  const out = big.map((d, i) => ({ label: d.label, r: d.r, n: d.r.n, share: d.r.n / denom, drawn: d.r.n / denom, color: PZ_COLORS[i % PZ_COLORS.length] }));
+  const remainder = denom - big.reduce((sum, d) => sum + d.r.n, 0);
+  // Keep the full denominator and exact angles. A withheld cell is never treated
+  // as zero or described as an under-10 cell: secondary suppression may be larger.
+  if (remainder > 0 && remainder < 10) return { slices: [], bounds: [0, 360] };
+  if (remainder >= 10) out.push({ label: big.length ? 'Other / withheld groups' : 'Breakdown unavailable',
+    withheld: true, n: remainder, share: remainder / denom, drawn: remainder / denom, color: PZ_GREY });
+  const draw = out.map((x) => x.drawn), sum = draw.reduce((t, v) => t + v, 0);
   let acc = 0; const bounds = [0];
   draw.forEach((v) => { acc += v / sum * 360; bounds.push(acc); });
   bounds[bounds.length - 1] = 360;
@@ -1449,7 +1467,7 @@ function pzDraw(b, opacity, rot) {
   PZ.slices.forEach((s, i) => {
     s.g.firstChild.setAttribute('d', pzArc(b[i], b[i + 1])); s.g.style.opacity = opacity;
     const t = s.text, span = b[i + 1] - b[i];
-    t.style.opacity = span < 4 ? 0 : opacity;
+    t.style.opacity = span < 12 ? 0 : opacity;  // narrow slices keep accessible hover labels without overlapping text
     const [x, y] = pzPt(pzMidOf(b, i) + rot, PZ_R + 14), right = x >= 0;
     t.setAttribute('x', x.toFixed(1)); t.setAttribute('y', (y + 4).toFixed(1));
     t.setAttribute('text-anchor', right ? 'start' : 'end');
@@ -1478,6 +1496,7 @@ function pzAnimate(target, from, fade, done, rotTo = PZ.rot, ms = PZ_MS) {
 }
 
 function pzFigure(s) {
+  if (s.withheld) return '<p>Individual group figures are unavailable or withheld. This pooled remainder preserves the total; it does not reveal any individual group size.</p>';
   if (s.excl) return `<dl>${s.excl.map((r) => `<dt>${r.flag}</dt><dd>${n0(r.n)}</dd>`).join('')}</dl>`
     + `<p><b>${n0(s.n)} responses</b> carry a strong warning and are left out of every figure on this page.</p>`;
   if (s.tiny) return `<p>${s.tiny.length} group${s.tiny.length > 1 ? 's' : ''} with fewer than 10 responses each (${s.tiny.join(', ')}). They are pooled and given no figures.</p>`;
@@ -1497,7 +1516,7 @@ const pzStratumLabel = () => (STRATA.find((t) => t.key === PZ.stratum) || {}).la
 function pzInfoShow(s) {
   const title = s.excl ? 'Excluded: strong warnings' : s.label;
   const sum = s.excl ? `${n0(s.n)} responses left out` : s.tiny ? 'Too few responses to follow' : `${n0(s.n)} responses · ${pct(s.share * 100)} of this split`;
-  pzInfo.innerHTML = `<h3><i style="background:${s.swatch || s.color}"></i>${title}${PZ.stratum ? `<small>${pzStratumLabel()}</small>` : ''}</h3>`
+  pzInfo.innerHTML = `<h3><i style="background:${s.swatch || s.color}"></i>${esc(title)}${PZ.stratum ? `<small>${esc(pzStratumLabel())}</small>` : ''}</h3>`
     + `<p class="sum">${sum}</p>${pzFigure(s)}`;
 }
 function pzInfoIdle() {
@@ -1575,10 +1594,10 @@ function pzInit() {
   Object.assign(PZ, { stratum: null, sel: null, slices: [], bounds: [0, 360], rot: 0, spin: false });
   $('pz-slices').replaceChildren(); $('pz-labels').replaceChildren(); $('pz').classList.remove('split'); $('pz-reset').hidden = true;
   pzTotal = rows('cube').find((r) => r.split_dim === 'none' && r.county === ALL && r.role === ALL) || { n: 0 };
-  $('pz-total').textContent = n0(pzTotal.n);
+  $('pz-total').textContent = pzTotal.n == null ? 'Withheld' : n0(pzTotal.n);
   const host = $('pz-strata'); host.replaceChildren();
   STRATA.forEach((t) => {
-    const b = el('button', '', `<b>${t.label}</b><span>${t.hint}</span>`);
+    const b = htmlEl('button', '', `<b>${t.label}</b><span>${t.hint}</span>`);
     b.type = 'button'; b.dataset.key = t.key; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', 'false');
     b.addEventListener('click', () => pzSetStratum(t.key));
     host.appendChild(b);
@@ -1614,7 +1633,7 @@ function renderActions() { renderDeck(); }
 function countActions() {
   document.getElementById('ac-count').innerHTML = `<b>${PICKED.size}</b> of ${RECS.length} actions selected`;
 }
-const plain = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent; };
+const plain = (text) => String(text ?? '');
 const pickedRecs = () => RECS.filter((_, i) => PICKED.has(i));
 /* One model feeds both the on-page report and every export, so they cannot disagree. */
 function reportModel() {
@@ -1626,14 +1645,15 @@ function reportModel() {
   const rep = (DATA.report || {}).report || DATA.report;
   return {
     audience: AUDIENCES[SEL.audience].label,
+    scope: `All surveyed locations · ${AUDIENCES[SEL.audience].label}`,
     stats: [
       [show(S.n), 'responses'], [show(S.sessions), 'training sessions'], [show(C.nps, sgn), 'NPS'],
       [show(C.pct_know_when, pct), 'know when to use 988, after'], [show(C.gain_index, (v) => sgn(v, 2)), 'knowledge gain index (1–5)'],
       [show(C.mean_recommend, (v) => v.toFixed(1) + ' / 10'), 'average would recommend'],
     ],
     knowledge: know.map(([label, a, b, c]) => [label, a.display_value, b.display_value, c.display_value]),
-    findings: [...know.map(([label, a, b, c]) => ({ title: `${label}: agreement changed from ${a.display_value} to ${b.display_value} (${c.display_value}).`, text: '' })),
-      ...(rep ? (rep.summary || []).map((f) => ({ title: f.text, text: '' })) : [])],
+    findings: rep?.summary?.length ? rep.summary.map((f) => ({ title: f.text, text: '' }))
+      : know.map(([label, a, b, c]) => ({ title: `${label}: agreement changed from ${a.display_value} to ${b.display_value} (${c.display_value}).`, text: '' })),
     actions: pickedRecs(),
     limits: [...(rep ? [].concat(rep.limitations || []) : []), ...S.limitations,
       'Associations and gains are descriptive; they do not show that the training caused a change.',
@@ -1642,7 +1662,7 @@ function reportModel() {
 }
 function summaryText() {
   const m = reportModel(), L = [];
-  L.push('# EveryMind 988 trainings: combined report', `Audience: ${m.audience}`, '');
+  L.push('# EveryMind 988 trainings: combined report', `Scope: ${m.scope}`, '');
   L.push('## 1. Summary statistics', ...m.stats.map(([v, l]) => `- ${l}: ${v}`), '');
   L.push('Agreement before → after training:', ...m.knowledge.map(([i, a, b, g]) => `- ${i}: ${a} → ${b} (${g})`), '');
   L.push('## 2. Findings', ...m.findings.map((f, i) => `${i + 1}. ${f.title}`), '');
@@ -1671,8 +1691,8 @@ function renderSummary() {
   sec(`3. Actions decided (${m.actions.length})`, m.actions.length ? al : el('p', 'note', 'No actions selected. Go back to Actions to choose some.'));
   const lm = el('ul'); m.limits.forEach((x) => lm.append(el('li', null, x)));
   sec('Limits', lm);
-  document.getElementById('sm-note').textContent = 'Scroll for the full report; export options are at the bottom.';
-  document.getElementById('sm-mail').href = 'mailto:?subject=' + encodeURIComponent('988 training: combined report') + '&body=' + encodeURIComponent(summaryText().slice(0, 1800));
+  document.getElementById('sm-note').textContent = m.scope + '. Scroll for the full report; export options are at the bottom.';
+  document.getElementById('sm-mail').href = 'mailto:?subject=' + encodeURIComponent('988 training: combined report') + '&body=' + encodeURIComponent(summaryText());
   document.getElementById('sm-ok').textContent = '';
 }
 const smOk = (t) => { document.getElementById('sm-ok').textContent = t; };

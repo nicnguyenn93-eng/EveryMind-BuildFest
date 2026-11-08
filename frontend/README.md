@@ -26,3 +26,12 @@ python frontend/build_site.py --explorer   # also rebuild the explorer page
 ```
 
 Not shown, because the live adapter does not compute them: correlations, trends over time, NPS intervals, respondent-flow diagrams, cleaning-flag counts.
+
+The action deck accepts Gemini recommendations and the backend's flat offline
+template fields. Cited censored comments come from the report response; the
+dashboard exposes aggregates only. Reports and exports label their scope as all
+surveyed locations for the selected audience. Late requests cannot overwrite a
+different selection. Pie angles use the full denominator, with a pooled withheld
+remainder and accessible hover labels for narrow slices.
+
+Regression checks: `node --test frontend/checks/stepper.test.cjs` (Node.js 18+).

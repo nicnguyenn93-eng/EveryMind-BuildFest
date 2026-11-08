@@ -48,9 +48,13 @@ This is a single-user local tool, not an authenticated hosted API.
 | `POST /api/uploads` | Multipart `file` (raw `.xlsx`/`.csv`); returns processing job ID (202). |
 | `GET /api/jobs/{job_id}` | Processing/ready/failed; ready includes the censored dataset handle. |
 | `GET /api/datasets/{sha}/dashboard?audience=All%20respondents` | `dataset_key`, audience, full analysis, county options/summaries, explorer cube and interpretation notes. |
-| `POST /api/reports` | `{dataset_id, audience, expected_dataset_key, use_llm, input_policy:"censored_comments_v1"}` → `{scope, report}`. Report uses `everymind.report.v1`. |
+| `POST /api/reports` | `{dataset_id, audience, expected_dataset_key, use_llm, input_policy:"censored_comments_v1"}` → `{scope, report, cited_comment_evidence}`. Report uses `everymind.report.v1`. |
 
 A changed or inconsistent dataset handle returns 409 before any provider call.
+`cited_comment_evidence` contains only current, audience-matched censored comments
+cited by the returned draft: opaque comment ID, source field, language, censored
+text, and automatic-review status. Uncited comments, respondent IDs, originals,
+and private linkage stay out of this response. The dashboard remains aggregate-only.
 Raw/checkpoint/old incomplete exports are not offered. Invalid requests return a
 clear error; processing exceptions omit raw text and identifiers. Frontend data
 and model prose are rendered as text, not executable markup.

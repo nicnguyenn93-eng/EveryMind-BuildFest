@@ -78,9 +78,28 @@ def test_report_has_wider_scope_and_includes_censored_comments(exported):
         assert reporter.call_args.kwargs['retries']==2
         assert result.json()['report']['censored_comment_count']==40
         assert result.json()['report']['input_policy']=='censored_comments_v1'
+        assert result.json()['cited_comment_evidence']==[]
         assert c.post('/api/reports',headers=HEADERS,json={**body,'county':'Montgomery'}).status_code==422
         assert c.post('/api/reports',headers=HEADERS,json={**body,'use_llm':'False'}).status_code==422
         assert c.post('/api/reports',headers=HEADERS,json={**body,'include_approved_comments':True}).status_code==422
+
+
+def test_report_returns_only_current_cited_censored_comments(exported):
+    from censored_comment_evidence import build_censored_comment_evidence
+    comments=build_censored_comment_evidence(exported, 'Students')
+    cited=comments[0]
+    reporter=Mock(return_value=dict(evidence_ids=[], summary=[dict(text='Synthetic finding',
+        evidence_ids=[cited['comment_evidence_id'], 'CC_unknown'])], proposed_recommendations=[]))
+    with TestClient(create_app(private_root=exported.root,reporter=reporter),base_url='http://localhost') as c:
+        ds=c.get('/api/datasets').json()['datasets'][0]
+        result=c.post('/api/reports',headers=HEADERS,json=dict(dataset_id=ds['dataset_id'],
+            expected_dataset_key=ds['dataset_key'],audience='Students',input_policy='censored_comments_v1'))
+        assert result.status_code==200
+        returned=result.json()['cited_comment_evidence']
+        assert len(returned)==1 and returned[0]['comment_evidence_id']==cited['comment_evidence_id']
+        assert set(returned[0])=={'comment_evidence_id','source_field','language','censored_text','review_status'}
+        assert '<EMAIL_ADDRESS>' in returned[0]['censored_text']
+        assert 'ada@example.com' not in result.text
 
 
 def test_stale_dataset_rejected_before_provider(exported):

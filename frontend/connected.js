@@ -68,7 +68,10 @@ window.Live = (() => {
     if (!(state.dashboard.summaries[SEL.county] || {}).n) SEL.county = ALL;
     DATA.cube = { rows: state.dashboard.cube };
   }
-  function resetReport() { DATA.report = DATA.payload = undefined; RECS.length = 0; PICKED.clear(); renderActions(); }
+  function resetReport() {
+    DATA.report = DATA.payload = undefined; RECS.length = 0; PICKED.clear(); renderActions();
+    $('gen-note').textContent = `Scope: ${AUD[SEL.audience]} across all surveyed locations. Gemini receives statistics and automatically censored written responses when requested; the county filter applies to Findings.`;
+  }
   function show() { pzInit(); refresh(); }
 
   /* Run on first entry to Findings: process an uploaded file, then load the dashboard. Resolves true when ready. */
@@ -98,17 +101,25 @@ window.Live = (() => {
   async function generate(useLlm) {
     const note = $('gen-note'), buttons = [$('gen-ai'), $('gen-off')];
     if (!state.dashboard) return;
+    const dataset = state.dataset.dataset_id, key = state.dashboard.dataset_key, audience = AUD[SEL.audience];
     buttons.forEach((b) => { b.disabled = true; });
     note.textContent = useLlm ? 'Requesting a Gemini draft… temporary errors are retried up to three times.' : 'Building the offline template…';
     try {
       const envelope = await api('reports', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dataset_id: state.dataset.dataset_id, audience: AUD[SEL.audience], expected_dataset_key: state.dashboard.dataset_key,
+        body: JSON.stringify({ dataset_id: dataset, audience, expected_dataset_key: key,
           use_llm: useLlm, input_policy: 'censored_comments_v1' }) });
-      setReport(envelope, state.dashboard.full_analysis);
+      if (state.dataset?.dataset_id !== dataset || state.dashboard?.dataset_key !== key || AUD[SEL.audience] !== audience) return;
       const r = envelope.report;
-      note.textContent = (r.mode === 'llm' ? `Gemini draft (${r.model}); staff review required.` : 'Offline template; staff review required.')
+      const previous = DATA.report?.report || DATA.report;
+      if (useLlm && r.mode !== 'llm' && previous?.mode === 'llm') {
+        note.textContent = `${r.fallback_reason || 'Gemini is temporarily unavailable.'} The previous draft for this dataset and audience is retained.`;
+        return;
+      }
+      setReport(envelope, { ...state.dashboard.full_analysis, censored_comment_evidence: envelope.cited_comment_evidence || [] });
+      note.textContent = `${envelope.scope} · ${r.censored_comment_count} automatically censored written responses · `
+        + (r.mode === 'llm' ? `Gemini draft (${r.model}); staff review required.` : 'Offline template; staff review required.')
         + (r.fallback_reason ? ' ' + r.fallback_reason : '');
-    } catch (e) { note.textContent = e.message; }
+    } catch (e) { if (state.dataset?.dataset_id === dataset && AUD[SEL.audience] === audience) note.textContent = e.message; }
     finally { buttons[0].disabled = !state.status.ai_configured; buttons[1].disabled = false; }
   }
 

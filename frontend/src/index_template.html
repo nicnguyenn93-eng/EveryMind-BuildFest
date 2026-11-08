@@ -619,8 +619,10 @@ const CUBE = (county, role) => find('cube', (r) => r.split_dim === 'none' && r.c
 const n0 = (x) => Number(x).toLocaleString('en-US');
 const pct = (x, d = 1) => Number(x).toFixed(d) + '%';
 const sgn = (x, d = 1) => (Number(x) > 0 ? '+' : '') + Number(x).toFixed(d);
-const el = (tag, cls, html) => { const e = document.createElement(tag);
-  if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const el = (tag, cls, text) => { const e = document.createElement(tag);
+  if (cls) e.className = cls; if (text != null) e.textContent = String(text); return e; };
+// Markup is explicit and limited to our templates; imported text uses el's textContent.
+const htmlEl = (tag, cls, html) => { const e = el(tag, cls); e.innerHTML = html; return e; };
 const clear = (id) => { const e = document.getElementById(id); e.replaceChildren(); return e; };
 
 /* ============================================================
@@ -937,8 +939,8 @@ function renderCheck() {
   const card = clear('check-body');
   const title = document.getElementById('check-title');
   const dl = el('dl');
-  const B = (t) => `<b>${t}</b>`;
-  const add = (k, ...v) => dl.append(el('dt', null, k), el('dd', null, v.join('')));
+  const B = (t) => el('b', null, t);
+  const add = (k, ...v) => { const value = el('dd'); value.append(...v); dl.append(el('dt', null, k), value); };
   let ok = true, note;
   if (info) {
     ok = !info.missing.length;
@@ -1061,9 +1063,9 @@ const STRATA = [
     pick: () => cubeWhere((r) => r.split_dim === 'none' && r.county === ALL && r.role !== ALL).map((r) => ({ label: r.role, r })) },
   { key: 'county', label: 'County', hint: 'Where the training was',
     pick: () => cubeWhere((r) => r.split_dim === 'none' && r.role === ALL && r.county !== ALL).map((r) => ({ label: r.county, r })) },
-  { key: 'language', label: 'Language', hint: 'English or Spanish speakers',
+  { key: 'language', label: 'Language', hint: 'English or Spanish forms',
     pick: () => cubeWhere((r) => r.split_dim === 'language' && r.county === ALL && r.role === ALL).map((r) => ({ label: r.split_val, r })) },
-  { key: 'quarter', label: 'Quarter', hint: 'When they answered', chrono: true,
+  { key: 'quarter', label: 'Quarter', hint: 'When training took place', chrono: true,
     pick: () => cubeWhere((r) => r.split_dim === 'quarter' && r.county === ALL && r.role === ALL).map((r) => ({ label: r.split_val, r })) },
 ];
 const PZ = { spin: false, stratum: null, slices: [], bounds: [0, 360], rot: 0, raf: 0, sel: null };
@@ -1075,13 +1077,16 @@ const PZ_EXN = 0;   // the live adapter excludes nothing, so there is no hatched
 
 function pzSlices(st) {
   const all = st.pick().sort((a, b) => st.chrono ? qKey(a.label) - qKey(b.label) : b.r.n - a.r.n);
-  const big = all.filter((d) => d.r.n >= 10), tiny = all.filter((d) => d.r.n < 10);
-  const denom = all.reduce((t, d) => t + d.r.n, 0), raw = denom + PZ_EXN;
-  const out = big.map((d, i) => ({ label: d.label, r: d.r, n: d.r.n, share: d.r.n / denom, drawn: d.r.n / raw, color: PZ_COLORS[i % PZ_COLORS.length] }));
-  if (tiny.length) { const n = tiny.reduce((t, d) => t + d.r.n, 0);
-    out.push({ label: 'Under 10', tiny: tiny.map((d) => d.label), share: n / denom, drawn: n / raw, color: PZ_GREY }); }
-  // the drawn share has a floor so nothing is a sliver; hover always reports the true figure
-  const draw = out.map((x) => Math.max(PZ_MIN, x.drawn)), sum = draw.reduce((t, v) => t + v, 0);
+  const big = all.filter((d) => Number.isFinite(d.r.n) && d.r.n >= 10), denom = pzTotal.n;
+  if (!Number.isFinite(denom) || denom < 10) return { slices: [], bounds: [0, 360] };
+  const out = big.map((d, i) => ({ label: d.label, r: d.r, n: d.r.n, share: d.r.n / denom, drawn: d.r.n / denom, color: PZ_COLORS[i % PZ_COLORS.length] }));
+  const remainder = denom - big.reduce((sum, d) => sum + d.r.n, 0);
+  // Keep the full denominator and exact angles. A withheld cell is never treated
+  // as zero or described as an under-10 cell: secondary suppression may be larger.
+  if (remainder > 0 && remainder < 10) return { slices: [], bounds: [0, 360] };
+  if (remainder >= 10) out.push({ label: big.length ? 'Other / withheld groups' : 'Breakdown unavailable',
+    withheld: true, n: remainder, share: remainder / denom, drawn: remainder / denom, color: PZ_GREY });
+  const draw = out.map((x) => x.drawn), sum = draw.reduce((t, v) => t + v, 0);
   let acc = 0; const bounds = [0];
   draw.forEach((v) => { acc += v / sum * 360; bounds.push(acc); });
   bounds[bounds.length - 1] = 360;
@@ -1101,7 +1106,7 @@ function pzDraw(b, opacity, rot) {
   PZ.slices.forEach((s, i) => {
     s.g.firstChild.setAttribute('d', pzArc(b[i], b[i + 1])); s.g.style.opacity = opacity;
     const t = s.text, span = b[i + 1] - b[i];
-    t.style.opacity = span < 4 ? 0 : opacity;
+    t.style.opacity = span < 12 ? 0 : opacity;  // narrow slices keep accessible hover labels without overlapping text
     const [x, y] = pzPt(pzMidOf(b, i) + rot, PZ_R + 14), right = x >= 0;
     t.setAttribute('x', x.toFixed(1)); t.setAttribute('y', (y + 4).toFixed(1));
     t.setAttribute('text-anchor', right ? 'start' : 'end');
@@ -1130,6 +1135,7 @@ function pzAnimate(target, from, fade, done, rotTo = PZ.rot, ms = PZ_MS) {
 }
 
 function pzFigure(s) {
+  if (s.withheld) return '<p>Individual group figures are unavailable or withheld. This pooled remainder preserves the total; it does not reveal any individual group size.</p>';
   if (s.excl) return `<dl>${s.excl.map((r) => `<dt>${r.flag}</dt><dd>${n0(r.n)}</dd>`).join('')}</dl>`
     + `<p><b>${n0(s.n)} responses</b> carry a strong warning and are left out of every figure on this page.</p>`;
   if (s.tiny) return `<p>${s.tiny.length} group${s.tiny.length > 1 ? 's' : ''} with fewer than 10 responses each (${s.tiny.join(', ')}). They are pooled and given no figures.</p>`;
@@ -1149,7 +1155,7 @@ const pzStratumLabel = () => (STRATA.find((t) => t.key === PZ.stratum) || {}).la
 function pzInfoShow(s) {
   const title = s.excl ? 'Excluded: strong warnings' : s.label;
   const sum = s.excl ? `${n0(s.n)} responses left out` : s.tiny ? 'Too few responses to follow' : `${n0(s.n)} responses · ${pct(s.share * 100)} of this split`;
-  pzInfo.innerHTML = `<h3><i style="background:${s.swatch || s.color}"></i>${title}${PZ.stratum ? `<small>${pzStratumLabel()}</small>` : ''}</h3>`
+  pzInfo.innerHTML = `<h3><i style="background:${s.swatch || s.color}"></i>${esc(title)}${PZ.stratum ? `<small>${esc(pzStratumLabel())}</small>` : ''}</h3>`
     + `<p class="sum">${sum}</p>${pzFigure(s)}`;
 }
 function pzInfoIdle() {
@@ -1227,10 +1233,10 @@ function pzInit() {
   Object.assign(PZ, { stratum: null, sel: null, slices: [], bounds: [0, 360], rot: 0, spin: false });
   $('pz-slices').replaceChildren(); $('pz-labels').replaceChildren(); $('pz').classList.remove('split'); $('pz-reset').hidden = true;
   pzTotal = rows('cube').find((r) => r.split_dim === 'none' && r.county === ALL && r.role === ALL) || { n: 0 };
-  $('pz-total').textContent = n0(pzTotal.n);
+  $('pz-total').textContent = pzTotal.n == null ? 'Withheld' : n0(pzTotal.n);
   const host = $('pz-strata'); host.replaceChildren();
   STRATA.forEach((t) => {
-    const b = el('button', '', `<b>${t.label}</b><span>${t.hint}</span>`);
+    const b = htmlEl('button', '', `<b>${t.label}</b><span>${t.hint}</span>`);
     b.type = 'button'; b.dataset.key = t.key; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', 'false');
     b.addEventListener('click', () => pzSetStratum(t.key));
     host.appendChild(b);
@@ -1266,7 +1272,7 @@ function renderActions() { renderDeck(); }
 function countActions() {
   document.getElementById('ac-count').innerHTML = `<b>${PICKED.size}</b> of ${RECS.length} actions selected`;
 }
-const plain = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent; };
+const plain = (text) => String(text ?? '');
 const pickedRecs = () => RECS.filter((_, i) => PICKED.has(i));
 /* One model feeds both the on-page report and every export, so they cannot disagree. */
 function reportModel() {
@@ -1278,14 +1284,15 @@ function reportModel() {
   const rep = (DATA.report || {}).report || DATA.report;
   return {
     audience: AUDIENCES[SEL.audience].label,
+    scope: `All surveyed locations · ${AUDIENCES[SEL.audience].label}`,
     stats: [
       [show(S.n), 'responses'], [show(S.sessions), 'training sessions'], [show(C.nps, sgn), 'NPS'],
       [show(C.pct_know_when, pct), 'know when to use 988, after'], [show(C.gain_index, (v) => sgn(v, 2)), 'knowledge gain index (1–5)'],
       [show(C.mean_recommend, (v) => v.toFixed(1) + ' / 10'), 'average would recommend'],
     ],
     knowledge: know.map(([label, a, b, c]) => [label, a.display_value, b.display_value, c.display_value]),
-    findings: [...know.map(([label, a, b, c]) => ({ title: `${label}: agreement changed from ${a.display_value} to ${b.display_value} (${c.display_value}).`, text: '' })),
-      ...(rep ? (rep.summary || []).map((f) => ({ title: f.text, text: '' })) : [])],
+    findings: rep?.summary?.length ? rep.summary.map((f) => ({ title: f.text, text: '' }))
+      : know.map(([label, a, b, c]) => ({ title: `${label}: agreement changed from ${a.display_value} to ${b.display_value} (${c.display_value}).`, text: '' })),
     actions: pickedRecs(),
     limits: [...(rep ? [].concat(rep.limitations || []) : []), ...S.limitations,
       'Associations and gains are descriptive; they do not show that the training caused a change.',
@@ -1294,7 +1301,7 @@ function reportModel() {
 }
 function summaryText() {
   const m = reportModel(), L = [];
-  L.push('# EveryMind 988 trainings: combined report', `Audience: ${m.audience}`, '');
+  L.push('# EveryMind 988 trainings: combined report', `Scope: ${m.scope}`, '');
   L.push('## 1. Summary statistics', ...m.stats.map(([v, l]) => `- ${l}: ${v}`), '');
   L.push('Agreement before → after training:', ...m.knowledge.map(([i, a, b, g]) => `- ${i}: ${a} → ${b} (${g})`), '');
   L.push('## 2. Findings', ...m.findings.map((f, i) => `${i + 1}. ${f.title}`), '');
@@ -1323,8 +1330,8 @@ function renderSummary() {
   sec(`3. Actions decided (${m.actions.length})`, m.actions.length ? al : el('p', 'note', 'No actions selected. Go back to Actions to choose some.'));
   const lm = el('ul'); m.limits.forEach((x) => lm.append(el('li', null, x)));
   sec('Limits', lm);
-  document.getElementById('sm-note').textContent = 'Scroll for the full report; export options are at the bottom.';
-  document.getElementById('sm-mail').href = 'mailto:?subject=' + encodeURIComponent('988 training: combined report') + '&body=' + encodeURIComponent(summaryText().slice(0, 1800));
+  document.getElementById('sm-note').textContent = m.scope + '. Scroll for the full report; export options are at the bottom.';
+  document.getElementById('sm-mail').href = 'mailto:?subject=' + encodeURIComponent('988 training: combined report') + '&body=' + encodeURIComponent(summaryText());
   document.getElementById('sm-ok').textContent = '';
 }
 const smOk = (t) => { document.getElementById('sm-ok').textContent = t; };
