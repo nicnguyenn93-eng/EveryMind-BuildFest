@@ -1,8 +1,10 @@
 # Local frontend and API
 
-Netra's landing page, upload card, loading overlay, report sections, map and rings
-are preserved. The local API supplies their current data and the existing Gemini
-report service. There is no public deployment or frontend API key.
+The frontend is a five-step page (Upload, Check, Findings, Actions, Summary). The local API supplies
+its current data and the existing Gemini report service. There is no public deployment or frontend
+API key. Findings show a split pie, headline tiles and knowledge cards; Actions drafts a Gemini (or
+offline) report as cards to take forward; Summary combines statistics, findings and the chosen
+actions into one exportable report.
 
 ```bash
 python -m pip install -r requirements-web.txt
@@ -26,7 +28,8 @@ completed dataset or resubmit the source. Excel ingestion uses John's sheet rule
 
 The entire connected view uses one verified censored CSV/manifest. The old prepared
 1,255-response tables are not used as a fallback. Opening index.html without the
-local API displays startup instructions and disables analysis controls. Static
+local API shows startup instructions and disables the upload controls. Correlations, trends and NPS
+intervals are not calculated by this adapter, so the page does not show them. Static
 historical explorer assets remain in the repository for comparison; the connected
 page passes a current dataset handle to the explorer, including its new-tab link.
 

@@ -14,11 +14,9 @@ the integrated command.
 
 The published workflow consists of command-line tools and the analysis notebook.
 The earlier Streamlit mock UI and placeholder report/PDF modules are removed.
-The frontend lives in [`frontend/`](frontend/README.md): a single built page of key
-insights and recommendations, with the interactive 988 Survey Explorer map embedded
-below them. It reads the analysis tables in `gemini_kit/data/` at build time, so it is
-static, offline, and contains no response-level data. Open `frontend/index.html`, or
-rebuild it with `python frontend/build_site.py`.
+The frontend lives in [`frontend/`](frontend/README.md): a five-step page (Upload, Check, Findings,
+Actions, Summary) served with live, censored data by `python -m everymind_web`. It embeds no survey
+figures. Rebuild it with `python frontend/build_site.py`.
 
 Code is organized into `everymind_cleaning/` (John's primary pipeline) and
 `everymind_censoring/` (our import and Presidio utilities). Data is kept in

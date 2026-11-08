@@ -1,0 +1,337 @@
+<!-- Analysis deck: the AI report as step-through cards, each with the test and a chart of its evidence.
+     Inlined into index_template.html at the ANALYSIS placeholder by build_site.py. Owns: .dk-* CSS, #deck markup, renderDeck(). -->
+<style>
+/* ---- analysis deck ---- */
+.dk { max-width:46rem; margin:0 auto; display:grid; gap:var(--gap-md); }
+.dk-top { display:flex; justify-content:space-between; align-items:center; gap:var(--gap-md); font-size:.8rem; color:var(--em-muted); }
+.dk-demo { background:var(--em-amber-soft); color:#8a5213; border-radius:999px; padding:.15rem .6rem; font-weight:600; }
+
+.dk-stage { display:grid; }
+.dk-card { grid-area:1/1; display:grid; }
+.dk-card[hidden] { display:none; }
+.dk-face { background:#fff; border:1.5px solid var(--em-line); border-radius:18px; padding:1.25rem 1.4rem; display:flex; flex-direction:column; gap:.8rem; }
+.dk-card.on .dk-face { border-color:var(--em-teal-deep); background:var(--em-teal-soft); }
+/* actions are the point of the page: findings stay quiet, action cards carry weight */
+.dk-card.act .dk-face { border:2px solid var(--em-teal-deep); border-left-width:8px; box-shadow:0 6px 22px rgba(31,117,118,.14); padding:1.5rem 1.6rem; }
+.dk-card.act .dk-kind { align-self:flex-start; background:var(--em-teal-deep); color:#fff; border-radius:999px; padding:.2rem .7rem; }
+.dk-card.act h3 { font-size:1.4rem; line-height:1.3; }
+.dk-card:not(.act) .dk-face { background:var(--em-panel); }
+.dk-plan { display:grid; grid-template-columns:repeat(auto-fit,minmax(13rem,1fr)); gap:.6rem; margin:0; }
+.dk-plan > div { background:#fff; border:1px solid var(--em-line); border-radius:12px; padding:.6rem .8rem; }
+.dk-plan dt { font-size:.7rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--em-teal-ink); }
+.dk-plan dd { margin:.15rem 0 0; font-size:.92rem; color:var(--em-ink); }
+.dk-basis { font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--em-muted); }
+.dk-card.act .dk-btn { font-size:1rem; padding:.7rem 1.5rem; background:var(--em-teal-deep); color:#fff; }
+.dk-card.act .dk-btn:hover { background:var(--em-teal-ink); }
+.dk-card.act.on .dk-btn { background:#fff; color:var(--em-teal-deep); }
+.dk-how { border-top:1px solid var(--em-line); padding-top:.6rem; font-size:.84rem; }
+.dk-how > summary { cursor:pointer; font-weight:600; color:var(--em-teal-ink); }
+.dk-how dl + dl { margin-top:.6rem; padding-top:.6rem; border-top:1px dashed var(--em-line); }
+.dk-kind { font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--em-teal-ink); }
+.dk-face h3 { font-size:1.12rem; line-height:1.35; font-weight:600; }
+.dk-chart { display:grid; gap:.9rem; margin-block:.4rem; }
+.dk-chart figure { margin:0; display:grid; gap:.25rem; }
+.dk-chart figcaption { font-size:.76rem; color:var(--em-muted); }
+.dk-chart svg { width:100%; max-width:32rem; margin-inline:auto; height:auto; display:block; overflow:visible; }
+.dk-chart text { font-family:var(--em-font); fill:var(--em-body); font-size:11px; }
+.dk-chart .v { fill:var(--em-ink); font-weight:600; font-variant-numeric:tabular-nums; }
+.dk-chart .ax { stroke:var(--em-grid); } .dk-chart .tk { fill:var(--em-muted); font-size:10px; }
+.dk-test { display:inline-flex; flex-wrap:wrap; gap:.35rem; align-items:center; font-size:.76rem; color:var(--em-muted); }
+.dk-test code { background:var(--em-panel); border:1px solid var(--em-line); border-radius:6px; padding:.05rem .4rem; font-size:.74rem; color:var(--em-ink); }
+.dk-act { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; margin-top:auto; }
+.dk-btn { font:inherit; font-size:.85rem; font-weight:600; cursor:pointer; border-radius:999px; padding:.5rem 1rem; border:1.5px solid var(--em-teal-deep);
+  background:#fff; color:var(--em-teal-deep); transition:background .2s, color .2s; }
+.dk-btn:hover, .dk-btn:focus-visible { background:var(--em-teal-soft); outline:none; }
+.dk-btn.pri { background:var(--em-teal-deep); color:#fff; } .dk-btn.pri:hover { background:var(--em-teal-ink); }
+.dk-btn.ghost { border-color:var(--em-line); color:var(--em-body); }
+.dk-face dl { margin:0; display:grid; grid-template-columns:auto minmax(0,1fr); gap:.35rem .8rem; font-size:.84rem; }
+.dk-face dt { font-weight:600; color:var(--em-teal-ink); } .dk-face dd { margin:0; }
+.dk-face ul { margin:0; padding-left:1.1rem; font-size:.88rem; display:grid; gap:.5rem; }
+.dk-nav { display:flex; align-items:center; justify-content:center; gap:var(--gap-md); }
+.dk-dots { display:flex; gap:.4rem; }
+.dk-dot { width:.6rem; height:.6rem; border-radius:50%; border:0; padding:0; background:var(--em-chart-muted); cursor:pointer; transition:transform .2s, background .2s; }
+.dk-dot.rec { border-radius:2px; } .dk-dot.pk { background:var(--em-green); }
+.dk-dot[aria-current="true"] { background:var(--em-teal-deep); transform:scale(1.5); }
+.dk-arrow { width:2.4rem; height:2.4rem; border-radius:50%; border:1.5px solid var(--em-line); background:#fff; font-size:1.1rem; cursor:pointer; color:var(--em-ink); }
+.dk-arrow:hover:not(:disabled), .dk-arrow:focus-visible { border-color:var(--em-teal-deep); background:var(--em-teal-soft); outline:none; }
+.dk-arrow:disabled { opacity:.35; cursor:default; }
+.dk-quotes { display:grid; gap:.6rem; } .dk-quotes blockquote { margin:0; border-left:4px solid var(--em-amber); background:var(--em-amber-soft); border-radius:0 10px 10px 0; padding:.6rem .9rem; color:var(--em-ink); font-size:.95rem; }
+.dk-quotes cite { display:block; margin-top:.2rem; font-style:normal; font-size:.72rem; color:var(--em-muted); text-transform:capitalize; }
+
+
+/* fit one screen: compact header, capped charts, details as an overlay instead of extra height */
+#ac-note, #ac-count { display:none; } .ac { padding-block:var(--gap-md) var(--gap-sm); } .ac .pz-head { margin-bottom:var(--gap-sm); }
+.dk { gap:.45rem; }
+.dk-face { position:relative; padding:.9rem 1.2rem; gap:.45rem; }
+.dk-card.act .dk-face { padding:1rem 1.3rem; }
+.dk-face h3 { font-size:1.05rem; } .dk-card.act h3 { font-size:1.2rem; }
+.dk-chart { gap:.2rem; margin-block:0; } .dk-chart svg { max-width:24rem; max-height:12vh; width:auto; }
+.dk-chart figcaption { font-size:.72rem; }
+.dk-plan > div { padding:.4rem .7rem; } .dk-plan dd { font-size:.85rem; }
+.dk-quotes blockquote { padding:.4rem .8rem; font-size:.88rem; }
+.dk-face ul { font-size:.85rem; gap:.35rem; }
+.dk-how { border:0; padding:0; }
+.dk-howbody { display:none; }
+.dk-how[open] .dk-howbody { display:grid; grid-template-columns:repeat(auto-fit,minmax(17rem,1fr)); gap:.5rem 1.2rem; align-content:start; position:absolute; inset:0; z-index:2; background:var(--em-panel); border-radius:inherit; padding:2.3rem 1.3rem .8rem; overflow:auto; }
+.dk-how[open] > summary { position:absolute; right:1.2rem; top:.8rem; z-index:3; font-size:0; }
+.dk-how[open] > summary::before { content:'✕ Close'; font-size:.84rem; }
+.dk-how dl { font-size:.8rem; gap:.25rem .7rem; }
+.dk-act { justify-content:space-between; margin-top:.2rem; } .dk-card.act .dk-btn { padding:.55rem 1.3rem; font-size:.95rem; }
+.dk-card.act .dk-quotes blockquote:nth-child(n+2) { display:none; }
+#ac-title { font-size:1.35rem; } .ac .pz-head { gap:0; }
+#actions .kicker { display:none; } .ac { padding-block:var(--gap-sm); } .dk-arrow { width:2rem; height:2rem; } .dk-chart svg { max-height:10vh; }
+.dk-how dl { font-size:.76rem; gap:.15rem .6rem; margin:0; } .dk-how dl + dl { margin:0; padding:0; border:0; }
+/* two columns: the action on the left, the evidence on the right; larger type and graphs */
+.dk { max-width:70rem; }
+.dk-face { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.15fr); gap:1.4rem 2rem; align-items:center; padding:1.4rem 1.8rem; }
+.dk-face.solo { grid-template-columns:1fr; max-width:46rem; margin-inline:auto; }
+.dk-l, .dk-r { display:flex; flex-direction:column; gap:.7rem; min-width:0; }
+.dk-face h3 { font-size:1.2rem; } .dk-card.act h3 { font-size:1.55rem; line-height:1.28; }
+.dk-sub { margin:0; font-size:.95rem; color:var(--em-body); }
+.dk-find { margin:0; font-size:1rem; color:var(--em-ink); border-left:3px solid var(--em-chart-muted); padding-left:.8rem; }
+.dk-find span { display:block; font-size:.7rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--em-muted); }
+.dk-plan dd { font-size:1rem; } .dk-plan dt { font-size:.72rem; } .dk-plan { grid-template-columns:1fr; } .dk-plan > div { padding:.5rem .8rem; }
+.dk-chart { gap:.6rem; } .dk-chart svg { max-width:100%; max-height:26vh; width:100%; } .dk-chart text { font-size:13.5px; } .dk-chart .tk { font-size:12px; }
+.dk-quotes blockquote { font-size:1rem; padding:.5rem .9rem; }
+.dk-test { font-size:.82rem; } .dk-test code { font-size:.8rem; }
+.dk-card.act .dk-btn { font-size:1.05rem; padding:.7rem 1.5rem; }
+.dk-act { justify-content:flex-start; gap:1.2rem; margin-top:.3rem; }
+.dk-how > summary { font-size:.9rem; }
+.dk-how dl { font-size:.88rem; }
+@media (max-width:52rem) { .dk-face { grid-template-columns:1fr; } .dk-chart svg { max-height:22vh; } }
+/* this step is only the cards: no explore drawer, no footer */
+#more-explore, #slide-3 footer { display:none; }
+/* fit: plan and button run along the bottom of the card */
+.dk-face { gap:.8rem 2rem; padding:1.1rem 1.6rem; }
+.dk-b { grid-column:1/-1; display:flex; flex-wrap:wrap; align-items:center; gap:.8rem 1.5rem; }
+.dk-plan { grid-template-columns:repeat(2,minmax(0,1fr)) !important; flex:1 1 28rem; }
+.dk-card.act h3 { font-size:1.35rem; } .dk-find { font-size:.95rem; }
+.dk-chart svg { max-height:22vh; } .dk-quotes blockquote { font-size:.95rem; }
+.dk-l, .dk-r { gap:.5rem; }
+.dk-face { padding:.8rem 1.5rem; gap:.6rem 2rem; } .dk-card.act h3 { font-size:1.25rem; } .dk-chart svg { max-height:19vh; }
+.dk-plan > div { padding:.35rem .7rem; } .dk-card.act .dk-btn { padding:.6rem 1.3rem; }
+#ac-title { font-size:1.2rem; } .ac { padding-block:.5rem .25rem; } .ac .pz-head { margin-bottom:.25rem; } .dk { gap:.3rem; }
+.dk-chart svg { max-height:17vh; } .dk-face { padding-block:.65rem; }
+</style>
+<script>
+/* ---- analysis deck: which test, which columns, which chart ---- */
+const DK_PAIR_COLS = [[/identify/i, ['q1_knowledge', 'q2_knowledge']], [/explain/i, ['q3_knowledge', 'q4_knowledge']], [/when to use/i, ['q5_knowledge', 'q6_knowledge']]];
+const DK_TESTS = {  // metric_type -> what was done; `cols` resolves the columns from the question text
+  paired_agreement: { name: 'Paired before / after agreement', how: 'Agree = 4 or 5 on the 5-point scale, counted only where the respondent answered both the recalled-before and post-training items.', cols: (q) => (DK_PAIR_COLS.find(([re]) => re.test(q)) || [0, []])[1] },
+  paired_agreement_change: { name: 'Paired before / after agreement', how: 'Post agreement minus recalled-before agreement, in percentage points, on the same paired respondents.', cols: (q) => (DK_PAIR_COLS.find(([re]) => re.test(q)) || [0, []])[1] },
+  mean: { name: 'Mean score (0 to 10)', how: 'Average of valid 0 to 10 answers; blanks are excluded, zero counts.', cols: (q) => [/intent/i.test(q) ? 'intent' : 'recommendation'] },
+  answer_coverage: { name: 'Answer coverage', how: 'Share of the audience that gave a valid answer to this item.', cols: (q) => [/intent/i.test(q) ? 'intent' : 'recommendation'] },
+  score_distribution: { name: 'Score distribution', how: 'Share of valid answers at each score from 0 to 10. Shown only when no bar is small enough to identify anyone.', cols: (q) => [/intent/i.test(q) ? 'intent' : 'recommendation'] },
+  neutral_on_either: { name: 'Neutral on either item', how: 'Respondents at the scale midpoint on the post-training explain or when-to-use item. Disagreement is counted separately.', cols: () => ['q4_knowledge', 'q6_knowledge'] },
+  not_agree_on_either: { name: 'Below agreement on either item', how: 'Neutral or disagree on the post-training explain or when-to-use item.', cols: () => ['q4_knowledge', 'q6_knowledge'] },
+  audience_comparison: { name: 'Audience comparison', how: 'Descriptive difference between two non-overlapping groups. No significance test.', cols: () => [] },
+  comment_quote: { name: 'Censored comment excerpt', how: 'Free-text comments with personal details removed automatically. Not human-reviewed, so a quote shows what was said, not how common it is.', cols: (q, e) => [e.source_field || 'comment'] },
+  comment_theme: { name: 'Reviewed comment theme', how: 'Approved comments tagged with this theme, out of the comments a person reviewed. A sample, not a prevalence estimate.', cols: (q, e) => [e.source_field || 'comment'] },
+};
+const dkType = (e) => e.metric_type || (e.comparator_value != null ? 'audience_comparison' : e.theme_positive != null ? 'comment_theme' : 'stat');
+const dkTest = (e) => (e.tag === 'approved paraphrase' ? { ...DK_TESTS.comment_quote, name: 'Approved comment paraphrase', how: 'A paraphrase of a comment that a person reviewed and approved. An example of what was said, not a count.' } : null) || DK_TESTS[dkType(e)] || { name: 'Single figure', how: 'A value computed from the cleaned export.', cols: () => [] };
+const dkCols = (e) => e.columns || dkTest(e).cols(e.survey_question || e.question || '', e);
+
+/* ---- tiny SVG helper and the shared 0-100 / 0-10 scales ---- */
+const dkSvg = (w, h, inner) => { const d = document.createElement('div');
+  d.innerHTML = `<svg viewBox="0 0 ${w} ${h}" role="img">${inner}</svg>`; return d.firstChild; };
+const dkF = (x, d = 1) => Number(x).toFixed(d);
+const dkLabel = (q) => String(q || '').replace(/:.*$/, '');
+
+/* Dumbbell: grey point to teal point on a 0-100 axis, with the change called out. */
+function dkDumbbell(a, b, la, lb, delta, aria) {
+  const W = 360, x = (v) => 20 + v * 3.2, ya = 46;
+  const up = b >= a, lo = Math.min(a, b), hi = Math.max(a, b);
+  const ticks = [0, 25, 50, 75, 100].map((t) => `<line class="ax" x1="${x(t)}" x2="${x(t)}" y1="30" y2="66"/><text class="tk" x="${x(t)}" y="80" text-anchor="middle">${t}%</text>`).join('');
+  const s = dkSvg(W, 92, `${ticks}
+    <line x1="${x(lo)}" x2="${x(hi)}" y1="${ya}" y2="${ya}" stroke="${up ? 'var(--em-green)' : 'var(--em-rose)'}" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="${x(a)}" cy="${ya}" r="8" fill="var(--em-chart-muted)" stroke="#fff" stroke-width="2"/>
+    <circle cx="${x(b)}" cy="${ya}" r="8" fill="var(--em-teal-deep)" stroke="#fff" stroke-width="2"/>
+    <text class="v" x="${Math.min(Math.max(x(a), 50), 310)}" y="22" text-anchor="middle">${la} ${dkF(a)}%</text>
+    <text class="v" x="${Math.min(Math.max(x(b), 50), 310)}" y="22" text-anchor="middle">${lb} ${dkF(b)}%</text>`);
+  s.setAttribute('aria-label', aria);
+  if (delta != null) s.insertAdjacentHTML('beforeend', `<text class="v" x="${x((a + b) / 2)}" y="62" text-anchor="middle" style="fill:var(--em-teal-ink)">${delta}</text>`);
+  return s;
+}
+/* Share bar: part of a whole, with the counts stated. */
+function dkShare(part, whole, color, label, aria) {
+  const p = whole ? 100 * part / whole : 0, w = 320;
+  const s = dkSvg(360, 60, `<rect x="20" y="14" width="${w}" height="18" rx="9" fill="var(--em-grid)"/>
+    <rect x="20" y="14" width="${Math.max(p * w / 100, p ? 4 : 0)}" height="18" rx="9" fill="${color}"/>
+    <text class="v" x="20" y="52">${dkF(p)}%</text><text x="${20 + w}" y="52" text-anchor="end">${label}</text>`);
+  s.setAttribute('aria-label', aria); return s;
+}
+/* Score line: 0-10 scale, bar to the mean, optional comparison point. */
+function dkMean(v, n, cmp, lab) {
+  const x = (t) => 20 + t * 32, ticks = Array.from({ length: 11 }, (_, i) => `<line class="ax" x1="${x(i)}" x2="${x(i)}" y1="30" y2="52"/><text class="tk" x="${x(i)}" y="66" text-anchor="middle">${i}</text>`).join('');
+  const s = dkSvg(360, 76, `${ticks}<rect x="${x(0)}" y="36" width="${x(v) - x(0)}" height="10" rx="5" fill="var(--em-teal)" opacity=".35"/>
+    <line x1="${x(v)}" x2="${x(v)}" y1="30" y2="52" stroke="var(--em-teal-deep)" stroke-width="3"/>
+    <circle cx="${x(v)}" cy="41" r="8" fill="var(--em-teal-deep)" stroke="#fff" stroke-width="2"/>
+    <text class="v" x="${x(v)}" y="${cmp != null && cmp.v < v ? 22 : cmp != null ? 22 : 22}" text-anchor="middle">${lab || 'Mean'} ${dkF(v, 2)}</text>
+    ${cmp != null ? `<circle cx="${x(cmp.v)}" cy="41" r="6" fill="var(--em-chart-muted)" stroke="#fff" stroke-width="2"/><text x="${x(cmp.v)}" y="${Math.abs(cmp.v - v) < 2.2 ? 8 : 22}" text-anchor="middle">${cmp.l} ${dkF(cmp.v, 2)}</text>` : ''}`);
+  s.setAttribute('aria-label', `Mean ${dkF(v, 2)} out of 10, ${n} valid answers`); return s;
+}
+/* Histogram: share of answers at each score 0-10. */
+function dkHist(rows) {
+  const by = Object.fromEntries(rows.map((r) => [r.score, r.value])), mx = Math.max(...Object.values(by), 1);
+  const bars = Array.from({ length: 11 }, (_, i) => { const v = by[i], h = v == null ? 0 : 70 * v / mx, x = 20 + i * 30;
+    return `<rect x="${x}" y="${88 - h}" width="22" height="${h}" rx="4" fill="var(--em-teal)" ${v == null ? 'opacity="0"' : ''}/>
+      ${v != null ? `<text class="tk" x="${x + 11}" y="${84 - h}" text-anchor="middle">${dkF(v, 0)}</text>` : ''}<text class="tk" x="${x + 11}" y="102" text-anchor="middle">${i}</text>`; }).join('');
+  const s = dkSvg(360, 108, `<line class="ax" x1="14" x2="350" y1="88" y2="88"/>${bars}`);
+  s.setAttribute('aria-label', 'Share of answers at each score from 0 to 10'); return s;
+}
+/* Theme bars: reviewed comments with the theme, out of those reviewed. */
+function dkThemes(rows) {
+  const out = el('div', 'dk-themes');
+  rows.forEach((r, i) => {
+    const p = r.percent_of_reviewed != null ? r.percent_of_reviewed : r.reviewed_denominator ? 100 * r.theme_positive / r.reviewed_denominator : 0;
+    const f = el('figure'); f.append(dkShare(r.theme_positive, r.reviewed_denominator, i % 2 ? 'var(--em-amber)' : 'var(--em-teal)',
+      `${r.theme_positive} of ${r.reviewed_denominator} reviewed`, `${r.theme || r.theme_id}: ${dkF(p, 0)}% of reviewed comments`));
+    f.append(el('figcaption', null, `<b>${esc(r.theme || r.theme_id || 'Theme')}</b>${r.approved_paraphrase ? ` · “${esc(r.approved_paraphrase)}”` : ''}`)); out.append(f);
+  });
+  return out;
+}
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* Every record shape the backend emits -> rows keyed by the id a report cites. */
+function dkNorm(p) {
+  const rows = [...(p.quantitative_evidence || [])];
+  (p.qualitative_themes || []).forEach((t) => rows.push({ ...t, evidence_id: t.evidence_id || t.theme_id, metric_type: 'comment_theme', theme: t.name, theme_positive: t.count }));
+  (p.approved_comment_evidence || []).forEach((c) => rows.push({ evidence_id: c.comment_evidence_id, metric_type: 'comment_quote', source_field: c.source_field, text: c.approved_paraphrase, tag: 'approved paraphrase', caveat: 'Human-approved paraphrase of a comment; an example, not a count.' }));
+  (p.censored_comment_evidence || []).forEach((c) => rows.push({ evidence_id: c.comment_evidence_id, metric_type: 'comment_quote', source_field: c.source_field, language: c.language, text: c.censored_text, tag: 'automatically censored', caveat: 'Automatically censored; not human-reviewed.' }));
+  (p.comparisons || []).forEach((c) => rows.push({ ...c, evidence_id: (c.evidence_ids || []).join('|'), metric_type: 'audience_comparison', survey_question: c.question, source_type: c.metric_type }));
+  return rows;
+}
+/* A card that cites both sides of a comparison gets the comparison, not two loose figures. */
+function dkEv(ids, map) {
+  const want = new Set(ids), out = [], used = new Set();
+  Object.values(map).filter((r) => r.metric_type === 'audience_comparison' && (r.evidence_ids || []).length && r.evidence_ids.every((i) => want.has(i)))
+    .forEach((r) => { out.push(r); r.evidence_ids.forEach((i) => used.add(i)); });
+  ids.forEach((i) => { if (map[i] && !used.has(i)) out.push(map[i]); });
+  return out;
+}
+/* Quotes: each censored comment as a pull-quote, tagged with the column it came from. */
+function dkQuotes(rows) {
+  const out = el('div', 'dk-quotes');
+  rows.slice(0, 2).forEach((r) => out.append(el('blockquote', null, `“${esc(r.text)}”<cite>${esc(String(r.source_field || '').replace(/_/g, ' '))}${r.language ? ' · ' + (r.language === 'es' ? 'Spanish' : 'English') : ''}${r.tag ? ' · ' + esc(r.tag) : ''}</cite>`)));
+  return out;
+}
+/* Evidence rows for one card -> [{test, cols, ids, n, caveat, node}], one chart per test family. */
+function dkCharts(rows) {
+  const of = (...t) => rows.filter((r) => t.includes(dkType(r))), out = [];
+  const add = (src, node, cap) => out.push({ test: dkTest(src[0]), cols: [...new Set(src.flatMap(dkCols))], ids: src.map((r) => r.evidence_id),
+    n: Math.max(0, ...src.map((r) => r.valid_denominator || r.group_valid_n || r.reviewed_denominator || 0)), caveat: [...new Set(src.map((r) => r.caveat).filter(Boolean))], node, cap });
+  let pr = of('paired_agreement', 'paired_agreement_change');
+  if (pr.length) { const stem = pr[0].evidence_id.replace(/_(BEFORE|POST|CHANGE)$/i, ''); pr = Object.values(DK.map || {}).filter((r) => r.evidence_id.replace(/_(BEFORE|POST|CHANGE)$/i, '') === stem && /^paired_agreement/.test(r.metric_type)); }
+  if (pr.length) {
+    const b = pr.find((r) => /BEFORE$/i.test(r.evidence_id)), p = pr.find((r) => /POST$/i.test(r.evidence_id)), c = pr.find((r) => r.metric_type === 'paired_agreement_change');
+    const bv = b ? b.value : c && c.post_agree != null ? 100 * c.before_agree / c.valid_denominator : null, pv = p ? p.value : c && c.post_agree != null ? 100 * c.post_agree / c.valid_denominator : null;
+    if (bv != null && pv != null) add(pr, dkDumbbell(bv, pv, 'Before', 'After', c ? `${c.value >= 0 ? '+' : ''}${dkF(c.value)} pp` : `${pv - bv >= 0 ? '+' : ''}${dkF(pv - bv)} pp`, `Agreement rose from ${dkF(bv)}% to ${dkF(pv)}%`),
+      `${dkLabel(pr[0].survey_question)}: share who agree, recalled before vs after the training`);
+    else pr.forEach((r) => add([r], dkShare(r.value, 100, 'var(--em-teal)', esc(r.display_value || ''), r.survey_question), r.survey_question));
+  }
+  of('mean').forEach((r) => add([r], dkMean(r.value, r.valid_denominator, null), `${dkLabel(r.survey_question)} (0 to 10), ${r.valid_denominator} valid answers`));
+  if (of('score_distribution').length) { const q = of('score_distribution')[0].survey_question, all = Object.values(DK.map || {}).filter((r) => r.metric_type === 'score_distribution' && r.survey_question === q);
+    add(all.length ? all : of('score_distribution'), dkHist(all.length ? all : of('score_distribution')), 'Share of answers at each score'); }
+  of('answer_coverage').forEach((r) => add([r], dkShare(r.numerator_or_score_sum, r.valid_denominator, 'var(--em-teal)', `${n0(r.numerator_or_score_sum)} of ${n0(r.valid_denominator)} answered`, 'Answer coverage'), 'Answer coverage: who gave a valid answer'));
+  of('neutral_on_either', 'not_agree_on_either').forEach((r) => add([r], dkShare(r.numerator_or_score_sum, r.valid_denominator, r.metric_type === 'neutral_on_either' ? 'var(--em-amber)' : 'var(--em-rose)', `${n0(r.numerator_or_score_sum)} of ${n0(r.valid_denominator)}`, r.survey_question), r.survey_question));
+  of('audience_comparison').forEach((r) => add([r], r.unit === 'score_0_10' ? dkMean(r.group_value, r.group_valid_n, { v: r.comparator_value, l: r.comparator }, r.group) : dkDumbbell(r.comparator_value, r.group_value, r.comparator, r.group, `${r.difference >= 0 ? '+' : ''}${dkF(r.difference)} pp`, `${r.group} vs ${r.comparator}`), `${r.group} vs ${r.comparator}`));
+  const cq = of('comment_quote');
+  if (cq.length) add(cq, dkQuotes(cq), 'What people wrote: examples, not a count');
+  const th = of('comment_theme');
+  if (th.length) add(th, dkThemes(th), 'Reviewed comments by theme (a sample, not a prevalence estimate)');
+  const known = new Set(out.flatMap((o) => o.ids)), rest = rows.filter((r) => !known.has(r.evidence_id));
+  rest.forEach((r) => add([r], dkShare(r.value || 0, 100, 'var(--em-teal)', esc(r.display_value || ''), r.evidence_id), r.survey_question || r.evidence_id));
+  return out;
+}
+
+/* ---- the deck ---- */
+let DK = { cards: [], i: 0, flipped: new Set() };
+function dkBuild() {
+  const rep = (DATA.report || {}).report || DATA.report, ev = DK.map = Object.fromEntries(dkNorm(DATA.payload || {}).map((r) => [r.evidence_id, r]));
+  if (!rep) return [];
+  const finds = rep.summary || [];
+  // a card is an action plus the findings that cite any of its evidence; no evidence rows, no card; unpaired findings are not shown
+  const cards = (rep.proposed_recommendations || []).map((r) => {
+    const own = new Set(r.evidence_ids), paired = finds.filter((f) => f.evidence_ids.some((i) => own.has(i)));
+    const ids = [...new Set([...r.evidence_ids, ...paired.flatMap((f) => f.evidence_ids)])];
+    return { kind: 'Proposed action', title: r.proposed_action || r.pilot, sub: r.proposed_action ? r.pilot : '', finds: paired.map((f) => f.text), ids, rows: dkEv(ids, ev), rec: r };
+  }).filter((c) => c.rows.length).map((c, k) => ({ ...c, pick: k }));
+  const lim = [].concat(rep.limitations || []);
+  if (cards.length && lim.length) cards.push({ kind: 'Limits', title: 'What this does not show', lim, ids: [], rows: [] });
+  return cards;
+}
+function dkRecs() {  // the existing RECS shape, from the report's recommendations
+  return dkBuild().filter((c) => c.rec).map((c) => ({ title: c.title, what: c.sub || c.rec.pilot, why: c.rows.map((r) => `${r.survey_question || r.theme || r.evidence_id}: ${r.display_value || ''}`).join('; ') || c.ids.join(', '),
+    owner: c.rec.staff_owner || c.rec.proposed_staff_owner, measure: c.rec.follow_up_measure, pri: ['now', 'Proposed'] }));
+}
+function dkFace(c) {
+  const face = el('div', 'dk-face'), L = el('div', 'dk-l'), R = el('div', 'dk-r');
+  const charts = dkCharts(c.rows).sort((x, y) => dkRank(x) - dkRank(y)).slice(0, 2);
+  L.append(el('span', 'dk-kind', c.kind), el('h3', null, esc(c.title)));
+  if (c.sub) L.append(el('p', 'dk-sub', esc(c.sub)));
+  (c.finds || []).slice(0, 1).forEach((t) => L.append(el('p', 'dk-find', `<span>The data</span>${esc(t)}`)));
+  const B = el('div', 'dk-b');
+  if (c.rec) { const dl = el('dl', 'dk-plan'); [['Owner', c.rec.staff_owner || c.rec.proposed_staff_owner], ['How we will know', c.rec.follow_up_measure]].forEach(([k, v]) => { const d = el('div'); d.append(el('dt', null, k), el('dd', null, esc(v))); dl.append(d); }); B.append(dl); }
+  if (c.lim) { const ul = el('ul'); c.lim.forEach((t) => ul.append(el('li', null, esc(t)))); L.append(ul); }
+  if (charts.length) { const box = el('div', 'dk-chart'); charts.forEach((ch) => { const f = el('figure'); f.append(ch.node); box.append(f); }); R.append(box);
+  }
+  const act = el('div', 'dk-act');
+  if (charts.length || c.rec) {
+    const how = el('details', 'dk-how'), body = el('div', 'dk-howbody'); how.append(el('summary', null, 'How we know'), body);
+    charts.forEach((ch) => { const dl = el('dl'); [['Shows', ch.cap], ['What it does', ch.test.how], ['Columns', ch.cols.join(', ') || 'derived'], ...(ch.n ? [['Valid n', n0(ch.n)]] : []), ['Evidence', ch.ids.join(', ')], ['Caveat', ch.caveat.join(' ') || 'None stated']]
+      .forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, esc(v)))); body.append(dl); });
+    if (c.rec) { const dl = el('dl'); [['What we are unsure of', c.rec.uncertainty]].forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, esc(v)))); body.append(dl); }
+    act.append(how);
+  }
+  if (c.rec) { const b = el('button', 'dk-btn', ''); b.type = 'button'; b.dataset.pick = c.pick; act.prepend(b); }
+  if (act.children.length) B.append(act);
+  face.append(L); if (R.children.length) face.append(R); else face.classList.add('solo');
+  if (B.children.length) face.append(B);
+  return [face];
+}
+/* numbers first, then what people wrote, then the plain share bars */
+const dkRank = (ch) => (/comment/.test(ch.test.name.toLowerCase()) ? 1 : /coverage/i.test(ch.test.name) ? 2 : 0);
+function renderDeck() {
+  const host = document.getElementById('deck');
+  if (!host) return;
+  DK.cards = dkBuild();
+  if (!DK.cards.length) { renderActionsPlain(); return; }
+  DK.i = Math.min(DK.i, DK.cards.length - 1); host.replaceChildren();
+  const rep = (DATA.report || {}).report || DATA.report;
+  const top = el('div', 'dk-top', `<span id="dk-pos"></span><b id="dk-sel"></b>${rep.demo || (DATA.report || {}).demo ? '<span class="dk-demo">Demo data, not the real analysis</span>' : `<span>${rep.mode === 'llm' ? 'AI-written, checked against the evidence' : rep.mode === 'template' ? 'Template summary' : ''}</span>`}`);
+  const stage = el('div', 'dk-stage'); stage.setAttribute('role', 'group'); stage.setAttribute('aria-roledescription', 'carousel');
+  DK.nodes = DK.cards.map((c) => { const n = el('div', 'dk-card' + (c.rec ? ' act' : '')); n.append(...dkFace(c)); stage.append(n); return n; });
+  const prev = el('button', 'dk-arrow', '←'), next = el('button', 'dk-arrow', '→'), dots = el('div', 'dk-dots'), nav = el('div', 'dk-nav');
+  prev.setAttribute('aria-label', 'Previous card'); next.setAttribute('aria-label', 'Next card'); prev.type = next.type = 'button';
+  DK.cards.forEach((c, k) => { const d = el('button', 'dk-dot' + (c.rec ? ' rec' : '')); d.type = 'button'; d.setAttribute('aria-label', `${c.kind}: card ${k + 1}`); d.onclick = () => dkShow(k); dots.append(d); });
+  prev.onclick = () => dkShow(DK.i - 1); next.onclick = () => dkShow(DK.i + 1); nav.append(prev, dots, next);
+  host.append(top, stage, nav); DK.prev = prev; DK.next = next; DK.dots = [...dots.children];
+  host.onclick = (e) => { const p = e.target.closest('[data-pick]');
+    if (p) { const k = Number(p.dataset.pick); PICKED.has(k) ? PICKED.delete(k) : PICKED.add(k); dkShow(DK.i); } };
+  host.onkeydown = (e) => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.stopPropagation(); dkShow(DK.i + (e.key === 'ArrowRight' ? 1 : -1)); } };
+  dkShow(DK.i);
+}
+function dkShow(k) {
+  k = Math.max(0, Math.min(DK.cards.length - 1, k)); DK.i = k;
+  DK.nodes.forEach((n, j) => { n.hidden = j !== k; n.inert = j !== k; });
+  DK.cards.forEach((c, j) => { if (c.rec) { const on = PICKED.has(c.pick); DK.nodes[j].classList.toggle('on', on); DK.dots[j].classList.toggle('pk', on);
+    const b = DK.nodes[j].querySelector('[data-pick]'); b.textContent = on ? '✓ Taking this forward' : '+ Take this action forward'; b.classList.toggle('pri', on); b.setAttribute('aria-pressed', on); } });
+  DK.dots.forEach((d, j) => d.setAttribute('aria-current', j === k));
+  DK.prev.disabled = k === 0; DK.next.disabled = k === DK.cards.length - 1;
+  document.getElementById('dk-sel').innerHTML = `<b style="color:var(--em-teal-deep)">${PICKED.size}</b> of ${RECS.length} actions taken forward`;
+  document.getElementById('dk-pos').textContent = `Card ${k + 1} of ${DK.cards.length} · ${DK.cards[k].kind}`;
+  countActions();
+}
+/* Without a report the step falls back to the plain tick-list. */
+function renderActionsPlain() {
+  const host = document.getElementById('deck'); host.replaceChildren();
+  const ul = el('ul', 'ac-list'); host.append(ul);
+  RECS.forEach((r, i) => { const li = el('li', 'ac-item' + (PICKED.has(i) ? ' on' : '')), lab = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.checked = PICKED.has(i);
+    cb.onchange = () => { cb.checked ? PICKED.add(i) : PICKED.delete(i); li.classList.toggle('on', cb.checked); countActions(); };
+    lab.append(cb, el('b', null, esc(r.title)), el('span', 'sub', esc(r.what))); li.append(lab); ul.append(li); });
+  countActions();
+}
+/* Hook for the real pipeline: setReport({scope, report}, analysisPayload) re-renders the deck. */
+function setReport(resp, payload) { DATA.report = resp; DATA.payload = payload || {}; RECS = dkRecs(); PICKED.clear(); DK.i = 0; renderDeck(); }
+</script>

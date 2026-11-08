@@ -1,41 +1,28 @@
-# Frontend — current censored data and Gemini
+# Frontend
 
-Netra's layout and controls are preserved. Run the connected page from the repository:
+A five-step page over the local API (`python -m everymind_web`, then http://127.0.0.1:8000). It embeds no survey figures.
 
-```bash
-python -m pip install -r requirements-web.txt
-python -m everymind_web
-```
+| Step | What it does |
+|---|---|
+| 1 Upload | Choose a raw `.xlsx`/`.csv` export, or an existing censored dataset. |
+| 2 Check | Rows, columns and the 20 expected headers (read in the browser); or the chosen dataset's facts. Next sends an upload to the server to be cleaned and censored. |
+| 3 Findings | A pie of all responses that splits by audience, county, language or quarter (hover for n, NPS, gain); headline tiles and knowledge cards for the chosen audience and county. |
+| 4 Actions | Draft a report with Gemini or the offline template; step through evidence and take actions forward. The county map and method notes sit in a collapsed section. |
+| 5 Summary | One combined report (statistics, findings, chosen actions, limits) with Save as PDF (print dialog), Download .md, Copy and Email. |
 
-Open **http://127.0.0.1:8000**. Choose an existing verified censored dataset or upload
-a raw `.xlsx`/`.csv`; Generate the report runs cleaning → censoring locally for
-new uploads. All tiles, findings, map/rings and report evidence use that selected
-censored export. Opening the page without the API displays startup instructions;
-older prepared aggregates are not substituted.
+## Files
 
-County and audience controls remain inside the report. Gemini has an explicit
-button for sending statistics and censored written responses and always uses the selected audience across all surveyed
-locations, irrespective of county. Nonblank censored responses are eligible without
-manual approval; raw originals and respondent IDs stay local. The dashboard does
-not expose comment rows, though a generated draft may quote censored wording. Known non-students is a role classification rather than a measured age.
-
-See [HTTP contract, scope and metric definitions](../docs/local_web_api.md).
-
-## Build and layout
+| File | Role |
+|---|---|
+| `src/index_template.html` | Page markup, styles and step logic. |
+| `src/analysis.html` | The Actions card deck (`renderDeck`, `setReport`). |
+| `connected.js` | `window.Live`: calls `/api/*` (status, datasets, uploads, jobs, dashboard, reports) and the explorer sync. |
+| `build_site.py` | Inlines fonts, the deck and `export_columns.json` into `index.html`. |
+| `explorer/` | The county map and rings; takes `?dataset=&audience=` from the page. |
 
 ```bash
-python frontend/build_site.py --explorer
+python frontend/build_site.py              # rebuild index.html
+python frontend/build_site.py --explorer   # also rebuild the explorer page
 ```
 
-- `src/index_template.html`: Netra's layout/styles and prepared-table renderer, with small live-adapter hooks.
-- `connected.js`: upload/selection, current aggregate rendering, explicit report calls and scope/state handling.
-- `index.html`: generated page.
-- `explorer/src/`: Netra's map and ring renderer, with current-data loading through a dataset handle.
-- `explorer/explorer_standalone.html`: generated explorer; current page links include the same dataset and audience.
-
-Historical `gemini_kit/data/` and explorer tables stay available for comparison.
-They are still embedded by the existing builder but never drive a connected run.
-The bare standalone explorer without a dataset query is a historical prepared view.
-No historical findings, correlations or recommendations are carried into a current
-run. Current outputs may withhold more fine groups than the prepared tables; the
-map/rings explain missing figures.
+Not shown, because the live adapter does not compute them: correlations, trends over time, NPS intervals, respondent-flow diagrams, cleaning-flag counts.
