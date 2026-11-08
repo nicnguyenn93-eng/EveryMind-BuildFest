@@ -1,3 +1,4 @@
 -r requirements.txt
--r requirements-report.txt
+-r requirements-web.txt
 pytest==9.0.2
+httpx==0.28.1
