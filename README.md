@@ -146,3 +146,9 @@ addresses, schools, contextual identifiers, and harmless survey text. It blocks
 DNS/socket connections, model downloads, and GPU activation, and writes detailed
 results to `private_data/presidio_synthetic_review.json`. Detection gaps are
 recorded for review instead of treating every target as guaranteed detection.
+
+The supplied survey has been processed and checked. See
+[BASELINE_REVIEW.md](BASELINE_REVIEW.md) for preservation checks, counts,
+synthetic gaps, and the first local comment spot-check. A major observed issue
+is that the source language label sometimes differs from the written language;
+this baseline preserves the requested field-based routing.
