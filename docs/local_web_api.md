@@ -182,3 +182,37 @@ Local artifacts are ignored under
 Browser verification confirmed the updated sharing description, explicit Gemini
 button, no manual comment approval step, and a displayed count of 1,714 input
 answers using the offline template without an additional provider call.
+
+## Intermittent Gemini 503 investigation (2026-11-08)
+
+A reported 503 was reaching the existing fallback correctly, but the web route
+explicitly used `retries=0` and the SDK also had retries disabled. One temporary
+provider failure therefore immediately became a cached local template, with a
+misleading message suggesting credentials or quota. Google's [Generate Content
+API error reference](https://ai.google.dev/gemini-api/docs/generate-content/api-errors)
+and [pinned 429/503 guidance](https://discuss.ai.google.dev/t/handling-429-503-errors-from-the-gemini-api/124640)
+describe 503 as temporary overload/unavailability and recommend bounded backoff.
+Restarting the local program alone does not resolve a provider outage.
+
+The web route now allows two retries, with exponential backoff/jitter and a shared
+180-second generation window. Permanent request/authentication errors fail once;
+long Retry-After values do not cause a long blocking wait. The error display and
+safe attempt/status logs distinguish 503 from authentication and quota problems.
+Provider-error templates do not overwrite cached successful drafts; intentional
+offline previews have their own cache slot. A refresh loads the revised frontend.
+
+After restarting the local server to load this code, a live POST through the real
+`http://127.0.0.1:8000/api/reports` endpoint returned local HTTP 200, `mode: llm`,
+one provider attempt, no fallback, all **1,714** censored answers, and a cited
+qualitative finding in **17.1 seconds**. This verifies the same configured key,
+model and full input can work; the earlier reported 503 was not reproduced in
+that live attempt. Retry recovery was separately verified using real SDK error
+types with simulated 503 → 503 → success and exhausted-503 sequences.
+
+**160 tests and 67 subtests passed** with socket/DNS networking disabled. Tests
+cover safe logs, no permanent-error retries, identical payloads on retry,
+Retry-After, and shrinking per-attempt timeouts at the generation deadline.
+Source workbook, cleaned checkpoint and censored CSV hashes stayed unchanged.
+Live artifacts remain ignored under
+`private_data/reports/72b08ff71ede/gemini_reliability_live/20261108T060734Z/`.
+These changes handle transient failures; they cannot guarantee provider capacity.
