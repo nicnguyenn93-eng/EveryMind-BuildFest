@@ -56,7 +56,7 @@ The supplied survey yields 1,299 records and 75 cleaned/derived columns.
 John's original values and mapping/quality rules are preserved. His existing
 heuristic selects English or Spanish **per comment**, with form-language fallback;
 the Presidio models and detection rules are unchanged. Missing/unsupported
-languages on nonblank comments stop the run; blanks bypass detection. This
+routed language codes on nonblank comments stop the run; blanks bypass detection. This
 heuristic is not a complete solution for mixed-language responses.
 
 The private redaction review includes source row, original ID, source language,
@@ -78,7 +78,8 @@ are local review outputs. Translation and LLM suggestion hooks stay disabled in
 the command and notebook workflow.
 
 See [everymind_cleaning/README.md](everymind_cleaning/README.md) for the notebook
-and dependency options.
+and dependency options. [INTEGRATION_REVIEW.md](INTEGRATION_REVIEW.md) records the
+real run, compatibility comparisons, and remaining detection problems.
 
 ## Convert the survey
 
