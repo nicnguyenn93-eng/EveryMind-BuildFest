@@ -46,7 +46,7 @@ class FakeClient:
 def test_analysis_and_offline_report_need_only_censored_files(exported, monkeypatch):
     shutil.rmtree(exported.root / 'raw')
     shutil.rmtree(exported.path.parent / 'private')
-    monkeypatch.setattr(report, '_make_client', lambda key: pytest.fail('Offline report requested a client'))
+    monkeypatch.setattr(report, '_make_client', lambda key, **options: pytest.fail('Offline report requested a client'))
     payload = service.get_analysis(exported.path)
     result = service.generate_report(exported.path, expected_dataset_key=payload['dataset_key'], use_llm=False)
     assert payload['schema_version'] == 'everymind.analysis.v2'
@@ -145,7 +145,7 @@ def test_withheld_audience_has_no_recommendation_or_provider_call(exported):
 
 def test_owned_provider_client_is_closed(exported, monkeypatch):
     client = FakeClient()
-    monkeypatch.setattr(report, '_make_client', lambda key: client)
+    monkeypatch.setattr(report, '_make_client', lambda key, **options: client)
     result = service.generate_report(exported.path, api_key='synthetic-key', retries=0)
     assert result['mode'] == 'llm' and client.closed
 
@@ -255,3 +255,18 @@ def test_censored_report_does_not_open_sources_or_original_comment_files(exporte
     client=CommentClient()
     result=service.generate_report(exported.path,client=client,retries=0)
     assert result['mode']=='llm' and result['censored_comment_count']==80
+
+
+def test_comment_requests_get_a_longer_bounded_sdk_timeout(exported,monkeypatch):
+    from google import genai
+    options=[]
+    def factory(**kwargs):
+        options.append(kwargs['http_options'])
+        return CommentClient() if len(options)==1 else FakeClient()
+    monkeypatch.setattr(genai,'Client',factory)
+    result=service.generate_report(exported.path,api_key='synthetic-key',retries=0)
+    assert result['mode']=='llm'
+    result=service.generate_report(exported.path,api_key='synthetic-key',include_censored_comments=False,retries=0)
+    assert result['mode']=='llm'
+    assert [o['timeout'] for o in options]==[120000,30000]
+    assert all(o['retry_options']['attempts']==1 for o in options)

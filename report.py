@@ -86,9 +86,11 @@ def draft_report(evidence: list, eligible_actions: list, **kwargs) -> dict:
 
 def draft_report_from_payload(payload: dict, eligible_actions: list, *, include_approved_comments: bool = False, include_censored_comments: bool = False,
                               model: str = DEFAULT_MODEL, api_key: Optional[str] = None, client=None,
-                              use_llm: bool = True, retries: int = 1) -> dict:
+                              use_llm: bool = True, retries: int = 1, request_timeout_ms: int = 30000) -> dict:
     if payload.get("schema_version") != "everymind.analysis.v2":
         raise ValueError("Expected an everymind.analysis.v2 payload from cleaned_analysis.build_ai_input.")
+    if isinstance(request_timeout_ms, bool) or not isinstance(request_timeout_ms, int) or not 1000 <= request_timeout_ms <= 180000:
+        raise ValueError("Request timeout must be an integer between 1000 and 180000 milliseconds.")
     actions = _actions(eligible_actions)
     if not actions:
         raise ValueError("No eligible actions to propose.")
@@ -101,7 +103,7 @@ def draft_report_from_payload(payload: dict, eligible_actions: list, *, include_
     owned_client = None
     try:
         if client is None:
-            owned_client = _make_client(api_key)
+            owned_client = _make_client(api_key, timeout_ms=request_timeout_ms)
             client = owned_client
         system = "\n\n".join(p.read_text(encoding="utf-8") for p in PROMPT_FILES)
         prompt = build_prompt(sent, actions)
@@ -192,12 +194,12 @@ def build_prompt(sent: dict, actions: list) -> str:
 
 
 # ----------------------------------------------------------------- Gemini
-def _make_client(api_key):
+def _make_client(api_key, *, timeout_ms=30000):
     key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     if not key:
         raise MissingAPIKeyError("No GEMINI_API_KEY set")
     from google import genai
-    return genai.Client(api_key=key, http_options={"timeout": 30000, "retry_options": {"attempts": 1}})
+    return genai.Client(api_key=key, http_options={"timeout": timeout_ms, "retry_options": {"attempts": 1}})
 
 
 def _call_gemini(client, model, system, prompt) -> dict:

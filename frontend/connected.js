@@ -35,8 +35,9 @@ window.Live = (() => {
     try {
       if (!/^https?:$/.test(location.protocol)) throw new Error('Local server required');
       state.status = await api('status');
+      if (state.status.input_policy !== 'censored_comments_v1') throw new Error('Restart the local server to load the current report input policy.');
     } catch {
-      document.getElementById('lede').textContent = 'Start the local EveryMind server to use current censored data.';
+      document.getElementById('lede').textContent = 'Start or restart the local EveryMind server to use the current report inputs.';
       fileOut.replaceChildren(node('p','verdict err','Run python -m everymind_web from the repository, then open http://127.0.0.1:8000. Historical prepared tables are not substituted for current data.'));
       return;
     }

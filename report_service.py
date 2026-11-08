@@ -46,7 +46,7 @@ class ReportResult(BaseModel):
     proposed_recommendations: list[ReportRecommendation]
     model: str | None
     fallback_reason: str | None
-    input_policy: Literal["aggregate_only", "censored_comments_v1"] = "aggregate_only"
+    input_policy: Literal["aggregate_only", "reviewed_comments", "censored_comments_v1"] = "aggregate_only"
     censored_comment_count: int = Field(default=0, ge=0)
 
 
@@ -121,9 +121,10 @@ def generate_report(censored_path, audience="All respondents", *,
     result = draft_report_from_payload(
         payload, catalog, include_approved_comments=include_approved_comments, include_censored_comments=include_censored_comments,
         api_key=api_key, model=model, use_llm=use_llm, retries=retries, client=client,
+        request_timeout_ms=120000 if payload.get("censored_comment_evidence") else 30000,
     )
     result = ReportResult.model_validate(dict(result, schema_version=REPORT_SCHEMA,
-        input_policy=INPUT_POLICY if include_censored_comments else "aggregate_only",
+        input_policy=INPUT_POLICY if include_censored_comments else ("reviewed_comments" if include_approved_comments else "aggregate_only"),
         censored_comment_count=len(payload.get("censored_comment_evidence", [])))).model_dump()
     json.dumps(result, allow_nan=False)
     return result

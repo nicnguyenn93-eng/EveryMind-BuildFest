@@ -64,7 +64,7 @@ include_censored_comments=True, api_key=None, model=DEFAULT_MODEL, use_llm=True,
 and verifies the current export, computes the analysis, and returns a report.
 Passing the analysis dataset key prevents generating a report from a dataset
 that changed while it was on screen. Set `use_llm=False` for an offline template.
-`retries` may be 0–2; each provider request has a 30-second timeout and the SDK's
+`retries` may be 0–2; each provider request has a 120-second timeout with censored comments (30 seconds without them) and the SDK's
 additional retries are disabled. Caller-supplied clients remain caller-owned.
 
 API credentials may be passed directly or configured in `GEMINI_API_KEY` /
@@ -91,7 +91,7 @@ JSON-compatible dictionaries, with no DataFrames, NaN, dates, or row identifiers
 | `limitations` | Report limitations as a string. |
 | `model` | Model name for an AI report; null for a template. |
 | `fallback_reason` | Safe explanation for a template; null for a successful AI draft. |
-| `input_policy` | `censored_comments_v1` by default, or `aggregate_only` for an explicit Python opt-out. |
+| `input_policy` | `censored_comments_v1` by default, or `aggregate_only` for an explicit Python opt-out (`reviewed_comments` for the separate legacy reviewed-only mode). |
 | `censored_comment_count` | Number of nonblank question answers included in this report input, not unique respondents. |
 
 Missing credentials, API errors, malformed responses, and failed evidence checks

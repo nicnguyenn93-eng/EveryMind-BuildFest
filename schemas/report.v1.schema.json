@@ -207,6 +207,7 @@
       "default": "aggregate_only",
       "enum": [
         "aggregate_only",
+        "reviewed_comments",
         "censored_comments_v1"
       ],
       "title": "Input Policy",

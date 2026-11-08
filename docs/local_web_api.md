@@ -95,7 +95,9 @@ Responses are labeled automatically censored, not human-reviewed. Only opaque
 citation IDs, question fields, languages and censored text accompany the statistics;
 respondent IDs, individual metadata, original files and private sidecars stay local.
 Generated drafts may quote censored wording. Existing numerical/citation validation
-and template fallback remain in place. Censoring may still miss identifiers.
+and template fallback remain in place. Comment requests have a bounded 120-second
+provider timeout; aggregate-only Python calls retain 30 seconds. The HTTP adapter
+makes one attempt and disables SDK retries. Censoring may still miss identifiers.
 
 The report body includes `input_policy: "censored_comments_v1"`, obtained from
 `GET /api/status`. An older page which still describes aggregate-only requests
@@ -152,3 +154,20 @@ truncated. Preview artifacts are ignored under
 The direct comment handoff is isolated from the legacy manually reviewed theme/
 paraphrase workflow. The latter remains available for audited analysis without
 blocking Gemini's access to the current censored responses.
+
+Censored-comment verification (2026-11-08): **152 tests and 67 subtests passed**
+with socket/DNS networking disabled. Tests cover direct comment citations without
+reviews, selected-audience filtering, English/Spanish/Unicode/multiline text,
+blank omission, exact export binding, original-file isolation, aggregate-only
+opt-out, strict request versions and bounded SDK timeouts.
+
+A first live attempt returned the template at the previous 30-second cutoff. A
+subsequent live attempt with the 120-second timeout succeeded in 18.6 seconds:
+`mode: llm`, all 1,714 censored answers plus 15 statistics, and a qualitative finding
+citing current censored-comment evidence. Citation/numeric/schema checks passed.
+The source workbook, cleaned checkpoint and censored CSV hashes were unchanged.
+Local artifacts are ignored under
+`private_data/reports/72b08ff71ede/censored_comments_live/20261108T055110Z/`.
+Browser verification confirmed the updated sharing description, explicit Gemini
+button, no manual comment approval step, and a displayed count of 1,714 input
+answers using the offline template without an additional provider call.
