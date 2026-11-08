@@ -439,6 +439,7 @@ footer .wrap { display:grid; gap:var(--gap-sm); }
 </footer>
 
 </div>
+<script src="connected.js"></script>
 <script>
 const DATA = /*__DATA__*/;
 
@@ -722,7 +723,7 @@ function syncGate() {
   buildBtn.disabled = !SEL.source;
   gateHint.textContent = SEL.source
     ? `Ready to build from ${SEL.source}.`
-    : 'Load an export to continue, or use the prepared dataset.';
+    : (Live.active ? 'Load an export or choose an existing censored dataset.' : 'Load an export to continue, or use the prepared dataset.');
 }
 
 /* ---- the loading overlay ---------------------------------------------- */
@@ -780,6 +781,7 @@ function showFile(info, error) {
 }
 
 async function handleFile(file) {
+  if (window.Live) return Live.handleFile(file);
   if (!file) return;
   const big = file.size > 400 * 1024;
   fileOut.replaceChildren(el('p', 'cap muted',
@@ -801,6 +803,7 @@ document.getElementById('file').addEventListener('change', (e) => handleFile(e.t
 ['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, () => drop.classList.remove('over')));
 drop.addEventListener('drop', (e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); });
 document.getElementById('usedemo').addEventListener('click', () => {
+  if (window.Live) return Live.chooseExisting();
   drop.classList.remove('ok', 'bad');
   SEL.source = `the prepared dataset (${n0(H.responses_total)} rows)`;
   fileOut.replaceChildren(el('p', 'verdict ok', 'Using the prepared dataset'),
@@ -818,6 +821,7 @@ document.getElementById('lede').innerHTML =
 syncGate();
 
 buildBtn.addEventListener('click', async () => {
+  if (window.Live) return Live.build();
   await withLoader([
     ['Reading the export', SEL.source, 260],
     ['Checking the columns against the pipeline schema', 'All 20 expected fields', 320],
@@ -846,6 +850,7 @@ const covered = rows('md_coverage').filter((r) => r.n > 0);
 const scopeChip = (text, wide) => el('span', 'scope' + (wide ? ' wideview' : ''), text);
 
 function renderReport() {
+  if (Live.dashboard) return Live.render();
   const A = AUDIENCES[SEL.audience];
   const S = stats(SEL.audience, SEL.county);
   const where = SEL.county === ALL ? 'all of Maryland' : SEL.county;
@@ -1190,6 +1195,7 @@ function renderReport() {
 /* Nudge the embedded explorer to the same selection. Same-origin only; if the browser
    blocks it (some file:// setups do), the explorer just opens on its default view. */
 function syncExplorer() {
+  if (Live.dashboard) return Live.syncExplorer();
   const frame = document.getElementById('explorer-frame');
   const apply = () => {
     try {
@@ -1207,9 +1213,10 @@ function syncExplorer() {
 
 const frame = document.getElementById('explorer-frame');
 let loaded = false;
-frame.addEventListener('load', () => { loaded = true; syncExplorer(); });
+frame.addEventListener('load', () => { loaded = true; document.getElementById('frame-notice').hidden = true; syncExplorer(); });
 frame.addEventListener('error', () => { document.getElementById('frame-notice').hidden = false; });
 setTimeout(() => { if (!loaded) document.getElementById('frame-notice').hidden = false; }, 8000);
+Live.init();
 </script>
 </body>
 </html>

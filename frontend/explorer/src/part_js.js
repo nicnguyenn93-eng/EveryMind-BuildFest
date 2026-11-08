@@ -3,7 +3,7 @@ window.EX = (() => {
   const ALL = '(all)';
   const num = (v) => (v === '' || v === null || v === undefined || v === 'NaN' ? null : Number(v));
   const FMT = {
-    int: d3.format(','), pct0: (v) => Math.round(v) + '%', d1: d3.format('.1f'), d2: d3.format('.2f'),
+    int: (v) => v == null ? '—' : d3.format(',')(v), pct0: (v) => v == null ? '—' : Math.round(v) + '%', d1: d3.format('.1f'), d2: d3.format('.2f'),
     s2: d3.format('+.2f'), nps: (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + d3.format('.0f')(Math.abs(v)),
   };
   const METRICS = {
@@ -18,7 +18,7 @@ window.EX = (() => {
     engaged_mean: { label: 'Presenter engagement', short: 'Engagement', fmt: FMT.d2, domain: [3.5, 5],
            note: 'Average answer to "The presenter engaged the participants" (1–5)' },
   };
-  const ROLES = ['Student', 'School staff', 'Caregiver/parent', 'Community member', 'Multiple roles'];
+  const ROLES = ['Student', 'School staff', 'Caregiver/parent', 'Community member', 'Multiple roles', 'Unspecified role'];
   const rows = () => { const d = dash.data('cube'); return d.status === 'ok' ? d.data : null; };
   const look = (rs, county, role, dim, val) =>
     rs.find((r) => r.county === county && r.role === role && r.split_dim === dim && r.split_val === val);
@@ -58,7 +58,9 @@ window.EX = (() => {
   const DRAWS = ['maptitle', 'mapnote', 'maplegend', 'map', 'countychips', 'mapdetail',
                  'splittitle', 'splitnote', 'mapsplit',
                  'ringlegend', 'ringcrumbs', 'rings', 'ringdetail'];
-  const set = (patch) => { Object.assign(S, patch); window.EXSYNC && window.EXSYNC(); DRAWS.forEach((n) => dash.draw(n)); };
+  const set = (patch) => { Object.assign(S, patch);
+    if (window.EXLIVE && 'mcounty' in patch && parent !== window)
+      parent.postMessage({type: 'everymind-county', county: S.mcounty, dataset_key: window.EXLIVE}, location.origin); window.EXSYNC && window.EXSYNC(); DRAWS.forEach((n) => dash.draw(n)); };
   const legend = (el, metric) => {
     const cfg = METRICS[metric];
     el.replaceChildren();
@@ -111,7 +113,7 @@ function exDetail(el, opts) {
   const h = document.createElement('div'); h.className = 'ex-title'; h.textContent = title; el.appendChild(h);
   if (subtitle) { const s = document.createElement('p'); s.className = 'cap muted'; s.textContent = subtitle; el.appendChild(s); }
   if (!row) {
-    const p = document.createElement('p'); p.className = 'cap muted'; p.textContent = 'No survey responses for this group.';
+    const p = document.createElement('p'); p.className = 'cap muted'; p.textContent = window.EXLIVE ? 'No publishable figures for this group. Protected or unavailable values are unknown.' : 'No survey responses for this group.';
     el.appendChild(p); return;
   }
   const n = EX.num(row.n), v = EX.num(row[metric]);
@@ -121,7 +123,7 @@ function exDetail(el, opts) {
   big.textContent = v === null ? '—' : cfg.fmt(v);
   const sub = document.createElement('span'); sub.className = 'cap muted';
   sub.textContent = v === null
-    ? (n < 10 ? 'fewer than 10 responses, so no figure is shown' : 'not enough answers to this question')
+    ? (n == null ? 'withheld or unavailable; not zero' : (n < 10 ? 'fewer than 10 responses, so no figure is shown' : 'not enough answers to this question'))
     : (metric === 'nps' && EX.num(row.ci_low) !== null
         ? `95% range ${EX.FMT.nps(EX.num(row.ci_low))} to ${EX.FMT.nps(EX.num(row.ci_high))}` : cfg.note);
   hero.append(lab, big, sub); el.appendChild(hero);
@@ -144,7 +146,7 @@ function exDetail(el, opts) {
     const mv = EX.num(row[k]);
     line(m.label, mv === null ? '—' : m.fmt(mv));
   });
-  line('Asked "would you call 988?"', EX.FMT.int(EX.num(row.n_call)) + ' of ' + EX.FMT.int(n));
+  line(window.EXLIVE ? 'Recorded likelihood-to-call scores' : 'Asked "would you call 988?"', EX.FMT.int(EX.num(row.n_call)) + ' of ' + EX.FMT.int(n));
   el.appendChild(tbl);
 
   if (row.reliability === 'small sample') {
@@ -180,7 +182,7 @@ dash.draw('maptitle', (el) => {
 dash.draw('mapnote', (el) => {
   const s = EX.state();
   el.textContent = s.mcounty === EX.ALL
-    ? 'Four of Maryland\u2019s twenty-four counties have survey responses. Click one to zoom in; the grey ones have not been surveyed.'
+    ? (window.EXLIVE ? 'Current censored dataset. Click a county to inspect it. Grey means no publishable figure; totals include other surveyed locations. Fine splits omit protected groups.' : 'Four of Maryland\u2019s twenty-four counties have survey responses. Click one to zoom in; the grey ones have not been surveyed.')
     : 'Click ' + s.mcounty + ' again, or use the chips below, to come back out to the whole state.';
 });
 
@@ -192,11 +194,11 @@ dash.draw('countychips', (el) => {
     const b = document.createElement('button'); b.className = 'ex-chip'; b.textContent = label;
     b.setAttribute('aria-pressed', String(active)); b.onclick = onClick; el.appendChild(b);
   };
-  add('\u2196 All of Maryland', s.mcounty === EX.ALL, () => EX.set({ mcounty: EX.ALL, mrole: EX.ALL }));
+  add(window.EXLIVE ? '\u2196 All surveyed locations' : '\u2196 All of Maryland', s.mcounty === EX.ALL, () => EX.set({ mcounty: EX.ALL, mrole: EX.ALL }));
   // only counties the map can actually show, so every chip zooms somewhere
   const onMap = new Set((window.MD_GEO ? window.MD_GEO.features : []).map((f) => f.properties.name));
   const off = [];
-  rs.filter((r) => r.role === EX.ALL && r.split_dim === 'none' && r.county !== EX.ALL)
+  rs.filter((r) => r.role === EX.ALL && r.split_dim === 'none' && r.county !== EX.ALL && (!window.EXLIVE || EX.num(r.n) > 0))
     .sort((a, b) => EX.num(b.n) - EX.num(a.n))
     .forEach((r) => {
       if (!onMap.has(r.county)) { off.push(`${r.county} ${EX.FMT.int(EX.num(r.n))}`); return; }
@@ -298,13 +300,13 @@ dash.draw('mapdetail', (el) => {
   el.classList.remove('dash-skeleton');
   const s = EX.state();
   const row = EX.look(rs, s.mcounty, s.mrole, 'none', 'none');
-  const where = s.mcounty === EX.ALL ? 'All of Maryland' : s.mcounty + ' County';
+  const where = s.mcounty === EX.ALL ? (window.EXLIVE ? 'All surveyed locations' : 'All of Maryland') : s.mcounty + ' County';
   const who = s.mrole === EX.ALL ? '' : (s.mrole === 'Student' ? 'students' : s.mrole.toLowerCase());
   const chips = [{ groupLabel: s.mcounty === EX.ALL ? 'Narrow to a role' : 'Narrow to a role within ' + s.mcounty,
                    label: 'Everyone', active: s.mrole === EX.ALL, onClick: () => EX.set({ mrole: EX.ALL }) }];
   EX.ROLES.forEach((role) => {
     const r = EX.look(rs, s.mcounty, role, 'none', 'none');
-    chips.push({ groupLabel: '', label: (role === 'Student' ? 'Students' : role) + (r ? ` (${EX.FMT.int(EX.num(r.n))})` : ' (0)'),
+    chips.push({ groupLabel: '', label: (role === 'Student' ? 'Students' : role) + (r ? ` (${EX.FMT.int(EX.num(r.n))})` : (window.EXLIVE ? ' (unavailable)' : ' (0)')),
                  active: s.mrole === role, disabled: !r,
                  onClick: () => EX.set({ mrole: role === s.mrole ? EX.ALL : role }) });
   });
@@ -320,7 +322,7 @@ window.EXRING = (() => {
   };
   const build = (rs, order) => {
     const ALL = EX.ALL;
-    const counties = [...new Set(rs.filter((r) => r.split_dim === 'none' && r.role === ALL && r.county !== ALL).map((r) => r.county))]
+    const counties = [...new Set(rs.filter((r) => r.split_dim === 'none' && r.role === ALL && r.county !== ALL && (!window.EXLIVE || EX.num(r.n) > 0)).map((r) => r.county))]
       .sort((a, b) => EX.num(EX.look(rs, b, ALL, 'none', 'none').n) - EX.num(EX.look(rs, a, ALL, 'none', 'none').n));
     const roles = EX.ROLES.filter((r) => EX.look(rs, ALL, r, 'none', 'none'));
     const outer = order === 'role' ? roles : counties;
@@ -508,7 +510,7 @@ function exBars(el, items, metric, onClick, selected) {
   el.replaceChildren();
   if (!items.length) {
     const p = document.createElement('p'); p.className = 'cap muted';
-    p.textContent = 'No responses to break down here.'; el.appendChild(p); return;
+    p.textContent = window.EXLIVE ? 'No publishable breakdown for this selection. Protected groups are omitted.' : 'No responses to break down here.'; el.appendChild(p); return;
   }
   const W = Math.max(300, el.clientWidth), narrow = W < 540;
   const labW = narrow ? 0 : 185, rowH = narrow ? 60 : 46, m = { t: 6, r: 60, b: 26, l: labW + 10 };
@@ -558,7 +560,7 @@ function exBars(el, items, metric, onClick, selected) {
 
 dash.draw('splittitle', (el) => {
   const s = EX.state();
-  const where = s.mcounty === EX.ALL ? 'All of Maryland' : s.mcounty + ' County';
+  const where = s.mcounty === EX.ALL ? (window.EXLIVE ? 'All surveyed locations' : 'All of Maryland') : s.mcounty + ' County';
   // when the bars already are the roles, naming the chosen role in the title would read twice
   const who = (s.mrole === EX.ALL || s.split === 'role') ? ''
     : ', ' + (s.mrole === 'Student' ? 'students' : s.mrole.toLowerCase());
@@ -601,3 +603,35 @@ dash.draw('mapsplit', (el) => {
   }
   exBars(el, items, s.metric, onClick, s.split === 'role' ? s.mrole : null);
 });
+
+/* Live data adapter. The static standalone view remains available without a query. */
+(async () => {
+  const query = new URLSearchParams(location.search);
+  if (!query.has('dataset')) return;
+  try {
+    const response = await fetch('/api/datasets/' + encodeURIComponent(query.get('dataset'))
+      + '/dashboard?audience=' + encodeURIComponent(query.get('audience') || 'All respondents'));
+    if (!response.ok) throw new Error('This censored dataset is no longer available. Reload the report.');
+    const current = await response.json();
+    window.EXLIVE = current.dataset_key;
+    document.querySelector('#top p').textContent = `${current.summaries[EX.ALL].n ?? 'Withheld'} retained responses · ${current.audience}. Current censored dataset. Finer splits and rings show publishable groups only; omitted groups are not zero.`;
+    document.querySelectorAll('#map .ex-notes li').forEach((li, i) => {
+      const notes = ['Colour shows the selected measure; grey means no publishable figure.',
+        'Small groups and complements may be withheld, including their counts. Some finer partitions are omitted entirely. Rings show displayed groups only.',
+        'Recorded likelihood-to-call scores exclude blanks; blank responses do not prove whether the item was shown.'];
+      if (notes[i]) li.textContent = notes[i];
+    });
+    document.querySelector('#rings .ex-notes li:nth-child(2)').textContent = 'Wedges show publishable groups only. Omitted protected groups are not zero. Wedge areas describe the displayed subset, which may be smaller than the parent total.';
+    EX.METRICS.nps.domain = [-100, 100];
+    EX.METRICS.gain_index.domain = [-4, 4];
+    EX.METRICS.pct_know_when.domain = [0, 100];
+    EX.METRICS.call_mean.domain = [0, 10];
+    EX.METRICS.engaged_mean.domain = [1, 5];
+    EX.METRICS.pct_know_when.note = 'Paired valid before/after answers: % agreeing after training';
+    dash.replace('cube', current.cube);
+    EX.set({mcounty: EX.ALL, mrole: EX.ALL, focus: [], pick: []});
+  } catch (error) {
+    document.getElementById('dash-root').replaceChildren(Object.assign(document.createElement('p'), {
+      textContent: 'Could not load the current censored dataset. Reload the report; no prepared data is substituted.'}));
+  }
+})();

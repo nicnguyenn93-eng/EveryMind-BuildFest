@@ -1,5 +1,11 @@
 # EveryMind local survey preparation
 
+Run Netra's connected frontend locally with `python -m pip install -r requirements-web.txt`
+and `python -m everymind_web`, then open **http://127.0.0.1:8000**. Existing censored
+datasets and new raw Excel/CSV uploads use the same pipeline. Charts and map use
+the selected censored export; Gemini is an explicit aggregate-only action.
+See [local web/API setup and contract](docs/local_web_api.md).
+
 John's `everymind_cleaning` package is the primary pipeline. It reads Excel or
 CSV directly, cleans the structured survey data, and calls the existing local
 Presidio engine through its privacy adapter. The standalone Excel converter and

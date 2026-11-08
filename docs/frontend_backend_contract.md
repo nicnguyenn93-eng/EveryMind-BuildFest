@@ -1,6 +1,6 @@
 # Frontend integration contract
 
-The reporting backend has no frontend framework or HTTP-server dependency.
+The Python reporting service remains frontend independent. The optional local HTTP adapter and Netra’s connected frontend are documented in [local_web_api.md](local_web_api.md).
 Nimi's Streamlit application is excluded. A frontend developed from main at
 `ea85075` can add its own app files and use the two functions in
 `report_service.py`. Importing the module does not call Gemini.
@@ -119,22 +119,10 @@ catalog option when evidence is publishable. Present actions as proposals requir
 review. Live testing with `gemini-3.6-flash` succeeded for the current all-respondent
 aggregate payload; model access and quota can still vary by account.
 
-## Compatibility note for Netra's frontend
+## Netra frontend
 
-Netra's frontend at `3dacc98` was published to main by PR #1 (`1e0f8d8`) while
-this backend was being verified. That upstream publication is preserved without
-editing any frontend files. It is a static HTML site with a Python build step,
-rather than a Python UI. Its upload
-screen validates a raw workbook locally in the browser, while its displayed
-figures come from prebuilt `gemini_kit/data/` tables and a separate explorer cube.
-Uploading a file there does not run the current cleaning/censoring/report service.
-
-The frontend owner can use this Python interface during a build step, or add a
-small backend HTTP adapter for dynamic reports. No HTTP server or endpoint is
-included in this integration. The current service supports the audiences in
-`analysis.AUDIENCES`; it does not yet provide the frontend's county filter/cube
-contract or an automatic mapping for its `Adults` label. Keep uploaded/current
-dataset results separate from the prebuilt demo tables until that wiring exists.
-A read-only three-way merge preview against this backend found no textual
-conflicts; the subsequent merge of the new main also completed without conflicts.
-Neither frontend branch nor frontend files were modified by the reporting changes.
+Netra's latest landing and report layout from `59f3d87` (PR #2) is preserved.
+The optional `everymind_web` adapter now connects its uploads, current censored
+aggregates, explorer and explicit Gemini calls. The Python interface above is
+unchanged. See [local_web_api.md](local_web_api.md) for HTTP contracts, current
+metric definitions, source scope and local setup.

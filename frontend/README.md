@@ -1,77 +1,40 @@
-# Frontend — 988 training findings
+# Frontend — current censored data and Gemini
 
-One page that answers "what did the trainings change, and what should change next",
-with the interactive county map underneath it.
-
-## Open it
-
-`index.html` — double-click. No server, no network, no build step needed to view it.
-The page embeds `explorer/explorer_standalone.html` in a frame; both are self-contained,
-so the whole thing also works from a file:// path or any static host.
-
-## What's on the page
-
-**The landing page** says what the tool is for, what it reads, what it checks and what you get,
-and takes one input: the survey export. Two formats are accepted — `.xlsx` (the survey tool's own
-Excel export) and `.csv` (UTF-8, column names in the first row). The file is read **in the browser**:
-row count, column count, a check against the 20 columns in `../export_columns.json`, and a local
-SHA-256. Nothing is uploaded. A link beside it continues with the prepared dataset instead.
-
-The `.xlsx` reader is about 40 lines on top of the browser's own `DecompressionStream`; a workbook
-is a zip, and only the first row of the first sheet is needed.
-
-Reading a file shows a spinner, and **Generate the report** runs a staged loading overlay
-(reading → checking columns → building findings → drawing charts) before the report appears.
-
-**The report** opens on everything — all respondents, all of Maryland — and carries its own view
-control if you want to narrow it afterwards:
-
-| Section | What it is |
-|---|---|
-| At a glance | Six tiles: responses, sessions, knowledge, NPS, call-item coverage. Above them, a control to switch audience (all / students / adults) and jurisdiction; combinations under 10 responses are disabled, so no figure can come from a group that small. |
-| Key insights | Six findings, each with its own chart. Each card carries a scope chip, because some measures exist only statewide or only for all respondents — the chip says which. |
-| Key recommendations | Seven actions, each with the evidence it rests on, an owner, and the measure that would show whether it worked; the ones bearing on the current view are marked. |
-| Interactive map | The 988 Survey Explorer, embedded, opened on the same county and role as the report when the browser allows the two pages to talk (it does over http; a `file://` page may not). |
-| Method and limits | What the numbers are, what they are not, and the cleaning decisions behind them. |
-
-## Where the numbers come from
-
-Every figure is read at build time — nothing on the page is typed in by hand.
-
-| Source | Used for |
-|---|---|
-| `../gemini_kit/data/*.csv` | headline, knowledge, satisfaction, drivers, themes, intent gap, engagement, coverage, trend, quality, language, robustness |
-| `explorer/data/md_coverage.csv` | which Maryland jurisdictions have responses |
-| `explorer/data/cube.csv` | the county × role figures the audience and jurisdiction filters read |
-| `../export_columns.json` | the columns step 1 checks an uploaded export against |
-| `explorer/data/cube.csv` | everything inside the embedded explorer |
-
-`build_site.py` reads those tables, inlines them as JSON plus the Poppins font into
-`src/index_template.html`, and writes `index.html`. The prose in the template refers to
-the data by lookup (`NPS('Adults').nps`, `THEME(...)`), so when the tables are
-regenerated the sentences update with the charts.
-
-## Rebuild
+Netra's layout and controls are preserved. Run the connected page from the repository:
 
 ```bash
-python frontend/build_site.py              # index.html from the current analysis tables
-python frontend/build_site.py --explorer   # also rebuilds the embedded explorer page
+python -m pip install -r requirements-web.txt
+python -m everymind_web
 ```
 
-To regenerate the analysis tables themselves, see `gemini_kit/README.md`; to regenerate
-the explorer's `cube.csv`, see `explorer/README.md`.
+Open **http://127.0.0.1:8000**. Choose an existing verified censored dataset or upload
+a raw `.xlsx`/`.csv`; Generate the report runs cleaning → censoring locally for
+new uploads. All tiles, findings, map/rings and report evidence use that selected
+censored export. Opening the page without the API displays startup instructions;
+older prepared aggregates are not substituted.
 
-## Layout
+County and audience controls remain inside the report. Gemini has an explicit
+aggregate-only button and always uses the selected audience across all surveyed
+locations, irrespective of county. No key or respondent/comment rows reach the
+frontend. Known non-students is a role classification rather than a measured age.
 
+See [HTTP contract, scope and metric definitions](../docs/local_web_api.md).
+
+## Build and layout
+
+```bash
+python frontend/build_site.py --explorer
 ```
-frontend/
-  index.html              built page — the thing you open
-  build_site.py           reads the analysis tables, writes index.html
-  src/index_template.html markup, styling, and the insight/recommendation text
-  explorer/               the 988 Survey Explorer, unchanged, with its own pipeline
-```
 
-## Privacy
+- `src/index_template.html`: Netra's layout/styles and prepared-table renderer, with small live-adapter hooks.
+- `connected.js`: upload/selection, current aggregate rendering, explicit report calls and scope/state handling.
+- `index.html`: generated page.
+- `explorer/src/`: Netra's map and ring renderer, with current-data loading through a dataset handle.
+- `explorer/explorer_standalone.html`: generated explorer; current page links include the same dataset and audience.
 
-Only aggregates are inlined. No group under 10 responses is given a figure, on this page
-or in the explorer, and `cube.csv` carries no figure for those groups either.
+Historical `gemini_kit/data/` and explorer tables stay available for comparison.
+They are still embedded by the existing builder but never drive a connected run.
+The bare standalone explorer without a dataset query is a historical prepared view.
+No historical findings, correlations or recommendations are carried into a current
+run. Current outputs may withhold more fine groups than the prepared tables; the
+map/rings explain missing figures.

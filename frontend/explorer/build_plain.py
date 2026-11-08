@@ -21,6 +21,8 @@ RENDER = """
    and `dash.draw(name)` re-runs it. Nothing here talks to a server. */
 window.dash = (() => {
   const DATA = %DATA%;
+  // Connected runs start empty, so stale prepared figures can never flash on screen.
+  if (new URLSearchParams(location.search).has('dataset')) delete DATA.cube;
   const draws = {}, listeners = [];
   const visible = (el) => !el.closest('[hidden]');
   const one = (n) => document.querySelectorAll('[data-draw="' + n + '"]').forEach((el) => {
@@ -35,6 +37,7 @@ window.dash = (() => {
     colors: [],
     data: (id) => (DATA[id] ? { status: 'ok', data: DATA[id].rows, columns: DATA[id].columns, meta: [] }
                              : { status: 'missing', data: [], columns: [], meta: [] }),
+    replace(id, rows) { DATA[id] = {rows, columns: rows.length ? Object.keys(rows[0]) : []}; all(); },
     calc() {}, loader() {}, refresh: all,
     draw(n, fn) { if (fn === undefined) { one(n); return; } draws[n] = fn; all(); },
     onData(fn) { listeners.push(fn); all(); },
