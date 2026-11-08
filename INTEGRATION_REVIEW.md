@@ -274,3 +274,18 @@ private artifacts remain available with matching hashes; the 15 active stage,
 analysis and review files were archived under `archive/pre_language_fix/` before
 replacement. Data remains Git-ignored. The current verification report is
 `private_data/reports/72b08ff71ede/language_merge_verification.json`.
+
+## Main publication scope
+
+The publication retains the integrated cleaning, Presidio, per-comment language
+routing, censored-data analysis, and optional Gemini command-line tools. The old
+Streamlit mock UI and placeholder report/PDF modules remain removed. A frontend
+will need a separate integration with the processed outputs.
+
+Pre-publication verification confirms the live censored export has 1,299 rows
+and 77 columns and matches its manifest and analysis dataset hash. The raw
+workbook, raw CSV, and cleaned checkpoint hashes are unchanged. Real survey data
+and private review outputs remain ignored and untracked by Git.
+The complete suite passed again with DNS/socket access blocked: 106 tests and
+67 subtests, including the installed English/Spanish Presidio model checks and
+John's cleaning checks. Dependency validation reports no broken requirements.

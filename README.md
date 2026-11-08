@@ -6,6 +6,10 @@ Presidio engine through its privacy adapter. The standalone Excel converter and
 full-CSV Presidio baseline remain available for comparison. No LLM is called by
 the integrated command.
 
+The published workflow consists of command-line tools and the analysis notebook.
+The earlier Streamlit mock UI and placeholder report/PDF modules are removed;
+a frontend can be connected to the processed analysis outputs separately.
+
 Code is organized into `everymind_cleaning/` (John's primary pipeline) and
 `everymind_censoring/` (our import and Presidio utilities). Data is kept in
 Git-ignored stage folders under `private_data/`: `raw/`, `cleaned/`, and `censoring/`,
