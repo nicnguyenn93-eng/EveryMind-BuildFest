@@ -48,6 +48,8 @@ class ReportResult(BaseModel):
     fallback_reason: str | None
     input_policy: Literal["aggregate_only", "reviewed_comments", "censored_comments_v1"] = "aggregate_only"
     censored_comment_count: int = Field(default=0, ge=0)
+    provider_attempts: int = Field(default=0, ge=0, le=3)
+    provider_http_status: int | None = None
 
 
 class ReportServiceError(ValueError):

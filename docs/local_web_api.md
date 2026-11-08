@@ -97,14 +97,25 @@ respondent IDs, individual metadata, original files and private sidecars stay lo
 Generated drafts may quote censored wording. Existing numerical/citation validation
 and template fallback remain in place. Comment requests have a bounded 120-second
 provider timeout; aggregate-only Python calls retain 30 seconds. The HTTP adapter
-makes one attempt and disables SDK retries. Censoring may still miss identifiers.
+allows up to three attempts with exponential backoff and jitter for temporary
+HTTP/network errors (including 503), within a 180-second generation deadline.
+Each attempt's HTTP timeout is capped by the remaining deadline. SDK retries
+remain disabled, so retry counts do not multiply. Permanent 400/401/403/404 errors
+are not retried. A Retry-After up to 30 seconds is honored; a longer delay returns
+a template for a later explicit request. Censoring may still miss identifiers.
 
 The report body includes `input_policy: "censored_comments_v1"`, obtained from
 `GET /api/status`. An older page which still describes aggregate-only requests
 receives a reload error before any provider call. This is a contract-version check,
 not a per-comment approval step. The report JSON adds `input_policy` and
-`censored_comment_count`. The cache key includes the input policy along with the
+`censored_comment_count`, `provider_attempts`, and `provider_http_status`.
+503 messages identify temporary provider overload/unavailability instead of
+blaming the key or quota. Safe server logs include attempt counts and HTTP
+statuses, never provider exception bodies, API keys or response text. The cache key includes the input policy along with the
 dataset hash and audience, so an old aggregate-only draft is not reused.
+Successful Gemini drafts and intentionally generated offline templates have
+separate browser cache entries. Provider-error fallbacks are displayed but never
+cached over a previous successful draft.
 
 The offline button never calls the provider. Each browser retains its generated
 report by dataset hash and audience for that page session; a new processed hash

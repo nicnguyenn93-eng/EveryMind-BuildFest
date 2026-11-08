@@ -10,7 +10,7 @@ prompts/report_task.md) plus the payload to Gemini, then check the answer:
   - every number in a summary finding comes from the records it cites,
   - every recommendation uses an eligible action_id from action_catalog.json,
   - the limitations mention retrospective self-report.
-If the API fails, there is no key, or the answer fails the check twice, it returns a
+If the API fails, there is no key, or the bounded retry budget is exhausted, it returns a
 deterministic template report instead (mode "template", with fallback_reason). It never raises
 for API problems, so the app keeps working.
 
@@ -24,9 +24,13 @@ Try:   python report.py            (live call on the synthetic fixture)
 from __future__ import annotations
 
 import json
+import logging
+import random
 import os
 import re
 import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import List, Optional
 
@@ -40,6 +44,9 @@ PROMPT_FILES = [
 ]
 DEFAULT_MODEL = os.environ.get("EVERYMIND_MODEL", "gemini-3.6-flash")
 MIN_VALID = 10
+LOGGER = logging.getLogger("everymind.report")
+RETRYABLE_HTTP = {408, 429, 500, 502, 503, 504}
+GENERATION_DEADLINE_SECONDS = 180
 NON_DATA_NUMBERS = [988.0, 911.0, 24.0, 7.0, 10.0]  # "988", "911", "24/7", "out of 10"
 TOLERANCE = 0.051  # "3.45" vs 3.4523 is fine; "3.6" vs 3.45 is not
 
@@ -91,6 +98,8 @@ def draft_report_from_payload(payload: dict, eligible_actions: list, *, include_
         raise ValueError("Expected an everymind.analysis.v2 payload from cleaned_analysis.build_ai_input.")
     if isinstance(request_timeout_ms, bool) or not isinstance(request_timeout_ms, int) or not 1000 <= request_timeout_ms <= 180000:
         raise ValueError("Request timeout must be an integer between 1000 and 180000 milliseconds.")
+    if isinstance(retries, bool) or not isinstance(retries, int) or not 0 <= retries <= 2:
+        raise ValueError("Report retries must be an integer between 0 and 2.")
     actions = _actions(eligible_actions)
     if not actions:
         raise ValueError("No eligible actions to propose.")
@@ -101,27 +110,43 @@ def draft_report_from_payload(payload: dict, eligible_actions: list, *, include_
         return template_report(payload, actions, "LLM disabled")
 
     owned_client = None
+    attempts = 0
+    deadline = time.monotonic() + GENERATION_DEADLINE_SECONDS
     try:
         if client is None:
             owned_client = _make_client(api_key, timeout_ms=request_timeout_ms)
             client = owned_client
         system = "\n\n".join(p.read_text(encoding="utf-8") for p in PROMPT_FILES)
         prompt = build_prompt(sent, actions)
-        last = None
+        last = TimeoutError("Generation deadline exceeded")
         for attempt in range(retries + 1):
+            remaining_ms = int((deadline - time.monotonic()) * 1000)
+            if remaining_ms < 1000:
+                break
+            attempts += 1
             try:
-                raw = _call_gemini(client, model, system, prompt)
+                raw = _call_gemini(client, model, system, prompt, timeout_ms=min(request_timeout_ms, remaining_ms))
                 validate(raw, sent, actions)
-                return _assemble(raw, payload, actions, model)
-            except ReportError as e:
-                last = e
-            except Exception as e:  # rate limit or network: wait, then retry
-                last = e
-                if attempt < retries:
-                    time.sleep(10 * (attempt + 1))
-        raise last  # type: ignore[misc]
-    except Exception as e:
-        return template_report(payload, actions, _fallback_reason(e))
+                result = _assemble(raw, payload, actions, model)
+                result.update(provider_attempts=attempts, provider_http_status=None)
+                return result
+            except Exception as error:
+                last = error
+                status = _http_status(error)
+                # Never log provider exception text: it may contain a key or data.
+                LOGGER.warning("Gemini attempt %d/%d failed (%s)", attempts, retries + 1,
+                               "HTTP " + str(status) if status else ("validation" if isinstance(error, ReportError) else "network/response"))
+                if attempt >= retries or not _retryable(error):
+                    break
+                delay = 0 if isinstance(error, ReportError) else _retry_delay(error, attempt)
+                if delay is None or delay >= deadline - time.monotonic():
+                    break  # A long Retry-After is left to a future explicit request.
+                time.sleep(delay)
+        raise last
+    except Exception as error:
+        result = template_report(payload, actions, _fallback_reason(error))
+        result.update(provider_attempts=attempts, provider_http_status=_http_status(error))
+        return result
     finally:
         if owned_client is not None:
             try:
@@ -130,19 +155,73 @@ def draft_report_from_payload(payload: dict, eligible_actions: list, *, include_
                 pass  # Cleanup must not replace a validated report or template.
 
 
+def _http_status(error):
+    if isinstance(error, ReportError):
+        return None
+    status = getattr(error, "code", None) or getattr(error, "status_code", None)
+    if isinstance(status, int) and not isinstance(status, bool):
+        return status
+    # Some transports expose only a response or a status-prefixed message.
+    status = getattr(getattr(error, "response", None), "status_code", None)
+    if isinstance(status, int) and not isinstance(status, bool):
+        return status
+    match = re.search(r"\b(400|401|403|404|408|429|500|502|503|504)\b", str(error))
+    return int(match.group()) if match else None
+
+
+def _retryable(error):
+    if isinstance(error, ReportError):
+        return True  # One bad generated answer may recover on the next attempt.
+    status = _http_status(error)
+    if status is not None:
+        return status in RETRYABLE_HTTP
+    return isinstance(error, (TimeoutError, ConnectionError)) or type(error).__name__ in {
+        "ConnectTimeout", "ReadTimeout", "WriteTimeout", "PoolTimeout",
+        "ConnectError", "ReadError", "WriteError", "RemoteProtocolError"}
+
+
+def _retry_delay(error, attempt):
+    delay = 2 ** (attempt + 1) + random.uniform(0, 0.5)
+    headers = getattr(getattr(error, "response", None), "headers", {}) or {}
+    try:
+        requested = float(headers.get("retry-after", 0))
+    except (TypeError, ValueError):
+        try:
+            when = parsedate_to_datetime(headers.get("retry-after", ""))
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+            requested = max(0, (when - datetime.now(timezone.utc)).total_seconds())
+        except (TypeError, ValueError, OverflowError):
+            requested = 0
+    if requested > 30:
+        return None
+    return max(delay, requested)
+
+
 def _fallback_reason(error):
-    """Provider exceptions may contain credentials, URLs, or request bodies."""
+    """Return actionable categories without exposing provider text or request data."""
     if isinstance(error, ReportError):
         return "Generated report failed evidence validation."
     if isinstance(error, MissingAPIKeyError):
         return "No Gemini API key configured."
-    status = getattr(error, "code", None) or getattr(error, "status_code", None)
-    if not isinstance(status, int):
-        match = re.search(r"\b(400|401|403|404|408|429|500|502|503|504)\b", str(error))
-        status = int(match.group()) if match else None
+    status = _http_status(error)
+    if status == 503:
+        return "Google Gemini is temporarily overloaded or unavailable (HTTP 503). Try again shortly."
+    if status == 429:
+        return "Gemini rate or quota limit reached (HTTP 429). Check the Google AI Studio limits and retry later."
+    if status in (401, 403):
+        return f"Gemini authentication or permission failed (HTTP {status}). Check the server API key and project access."
+    if status == 404:
+        return "Gemini model or endpoint was not found (HTTP 404). Check the configured model and access."
+    if status in (408, 504):
+        return f"Gemini request timed out (HTTP {status}). Try again shortly."
+    if status in (500, 502):
+        return f"Google Gemini returned a temporary service error (HTTP {status}). Try again shortly."
     if status:
-        return f"Gemini request failed (HTTP {status}). Check model access, quota, and credentials."
-    return "Gemini unavailable. Check the API key, model, network, and installed app dependencies."
+        return f"Gemini request failed (HTTP {status}). Check the request configuration."
+    if _retryable(error):
+        return "Gemini connection or request timed out. Try again shortly."
+    return "Gemini unavailable. Check the server network and installed reporting dependencies."
 
 
 # ----------------------------------------------------------------- what leaves the machine
@@ -202,11 +281,12 @@ def _make_client(api_key, *, timeout_ms=30000):
     return genai.Client(api_key=key, http_options={"timeout": timeout_ms, "retry_options": {"attempts": 1}})
 
 
-def _call_gemini(client, model, system, prompt) -> dict:
+def _call_gemini(client, model, system, prompt, *, timeout_ms=None) -> dict:
     """THE API CALL. Everything else in this file prepares for it or checks its answer."""
     from google.genai import types
     config = types.GenerateContentConfig(system_instruction=system, response_mime_type="application/json",
-                                         response_schema=LLMReport, temperature=0.2)
+                                         response_schema=LLMReport, temperature=0.2,
+                                         http_options={"timeout": timeout_ms} if timeout_ms is not None else None)
     resp = client.models.generate_content(model=model, contents=prompt, config=config)
     try:
         parsed = getattr(resp, "parsed", None)

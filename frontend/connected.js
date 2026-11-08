@@ -202,8 +202,9 @@ window.Live = (() => {
     const output=node('div'); host.append(output);
     const display = envelope => {
       output.replaceChildren(); const r=envelope.report;
-      output.append(node('p','kicker',r.mode==='llm' ? `Gemini draft · ${r.model} · review required` : 'Offline template · review required'));
+      output.append(node('p','kicker',r.mode==='llm' ? `Gemini draft · ${r.model} · review required` : (r.fallback_reason === 'LLM disabled' ? 'Offline template · review required' : 'Gemini draft unavailable · local template')));
       output.append(node('p','cap muted',`${r.censored_comment_count ?? 0} censored written responses in the report input · automatic censoring, no manual review`));
+      if (r.provider_attempts) output.append(node('p','cap muted',`Gemini attempts: ${r.provider_attempts}${r.provider_http_status ? ' · final HTTP status: '+r.provider_http_status : ''}`));
       if (r.fallback_reason) output.append(node('p','cap muted',r.fallback_reason));
       if (r.summary.length) r.summary.forEach(finding => {
         output.append(node('p',null,finding.text),node('p','cap muted','Evidence: '+finding.evidence_ids.join(', ')));
@@ -217,15 +218,17 @@ window.Live = (() => {
       if (!r.proposed_recommendations.length && r.proposed_action) output.append(node('p',null,`Proposed action: ${r.proposed_action}. Owner: ${r.staff_owner}. Follow-up: ${r.follow_up_measure}.`));
       output.append(node('p','foot',r.limitations));
     };
-    if (state.reports.has(cacheKey)) display(state.reports.get(cacheKey));
+    const cached = state.reports.get(cacheKey+'|llm') || state.reports.get(cacheKey+'|offline');
+    if (cached) display(cached);
     else output.append(node('p','cap muted','No draft generated for this audience yet. The Gemini request includes statistics and censored comments for this audience; respondent IDs stay local.'));
     ai.disabled=!state.status.ai_configured;
     if (ai.disabled) ai.title='Configure the Gemini key on the local server; never enter it into the page.';
     const generate=async use_llm=>{
-      ai.disabled=offline.disabled=true;output.replaceChildren(node('p','cap muted',use_llm?'Requesting a Gemini draft…':'Building an offline template…'));
+      ai.disabled=offline.disabled=true;output.replaceChildren(node('p','cap muted',use_llm?'Requesting a Gemini draft… Temporary service errors are retried automatically, up to three attempts within a three-minute generation window.':'Building an offline template…'));
       try {
         const envelope=await api('reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataset_id:state.dataset.dataset_id,audience,expected_dataset_key:state.dashboard.dataset_key,input_policy:state.status.input_policy,use_llm})});
-        state.reports.set(cacheKey,envelope);display(envelope);
+        if (envelope.report.mode === 'llm' || !use_llm) state.reports.set(cacheKey+(use_llm?'|llm':'|offline'),envelope);
+        display(envelope);
       } catch(e) {output.replaceChildren(node('p','verdict err',e.message));}
       finally {ai.disabled=!state.status.ai_configured;offline.disabled=false;}
     };

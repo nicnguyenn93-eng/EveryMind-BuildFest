@@ -97,3 +97,82 @@ def test_wrong_scope_is_rejected():
                    quantitative_evidence=STUDENTS)
     with pytest.raises(ValueError, match="scope"):
         report.draft_report_from_payload(payload, CATALOG, client=FakeClient(GOOD))
+
+
+class SequenceClient(FakeClient):
+    def generate_content(self, model, contents, config):
+        self.prompts.append(contents)
+        result = self.answers.pop(0)
+        if isinstance(result, Exception):
+            raise result
+        return FakeResp(result)
+
+
+def provider_error(status):
+    from google.genai.errors import ClientError, ServerError
+    error_class = ServerError if status >= 500 else ClientError
+    return error_class(status, {'error': {'code':status, 'status':'UNAVAILABLE',
+        'message':'synthetic-secret respondent ada@example.com'}})
+
+
+def test_503_retries_same_request_and_recovers(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr(report.time, 'sleep', sleeps.append)
+    monkeypatch.setattr(report.random, 'uniform', lambda *args: 0)
+    client = SequenceClient(provider_error(503), provider_error(503), GOOD)
+    result = report.draft_report(STUDENTS, CATALOG, client=client, retries=2)
+    assert result['mode']=='llm' and result['provider_attempts']==3
+    assert result['provider_http_status'] is None
+    assert len(client.prompts)==3 and len(set(client.prompts))==1
+    assert sleeps==[2,4]
+
+
+def test_exhausted_503_has_specific_safe_reason_and_logs(monkeypatch, caplog):
+    monkeypatch.setattr(report.time,'sleep',lambda seconds:None)
+    client=FakeClient(error=provider_error(503))
+    result=report.draft_report(STUDENTS,CATALOG,client=client,retries=2)
+    assert result['mode']=='template' and result['provider_attempts']==3 and result['provider_http_status']==503
+    assert 'temporarily overloaded or unavailable' in result['fallback_reason']
+    assert 'credentials' not in result['fallback_reason'] and 'quota' not in result['fallback_reason']
+    for text in (json.dumps(result),caplog.text):
+        assert 'synthetic-secret' not in text and 'ada@example.com' not in text
+
+
+@pytest.mark.parametrize('status',[400,401,403,404])
+def test_permanent_errors_are_not_retried(status,monkeypatch):
+    monkeypatch.setattr(report.time,'sleep',lambda seconds:pytest.fail('Permanent error was retried'))
+    client=FakeClient(error=provider_error(status))
+    result=report.draft_report(STUDENTS,CATALOG,client=client,retries=2)
+    assert result['mode']=='template' and result['provider_attempts']==1
+    assert result['provider_http_status']==status and len(client.prompts)==1
+
+
+def test_provider_retry_after_is_respected_without_long_blocking(monkeypatch):
+    sleeps=[]
+    monkeypatch.setattr(report.time,'sleep',sleeps.append)
+    error=provider_error(503)
+    error.response=type('Response',(),{'headers':{'retry-after':'6'}})()
+    client=SequenceClient(error,GOOD)
+    assert report.draft_report(STUDENTS,CATALOG,client=client,retries=2)['mode']=='llm'
+    assert sleeps==[6]
+    error.response.headers['retry-after']='120'
+    client=FakeClient(error=error)
+    result=report.draft_report(STUDENTS,CATALOG,client=client,retries=2)
+    assert result['provider_attempts']==1 and sleeps==[6]
+
+
+def test_generation_deadline_limits_retry_timeout(monkeypatch):
+    clock=[0]
+    timeouts=[]
+    monkeypatch.setattr(report.time,'monotonic',lambda:clock[0])
+    monkeypatch.setattr(report.time,'sleep',lambda seconds:clock.__setitem__(0,clock[0]+seconds))
+    monkeypatch.setattr(report.random,'uniform',lambda *args:0)
+    def timeout(client,model,system,prompt,*,timeout_ms):
+        timeouts.append(timeout_ms)
+        clock[0]+=timeout_ms/1000
+        raise TimeoutError('synthetic-secret request body')
+    monkeypatch.setattr(report,'_call_gemini',timeout)
+    result=report.draft_report(STUDENTS,CATALOG,client=FakeClient(GOOD),retries=2,request_timeout_ms=120000)
+    assert timeouts==[120000,58000] and clock[0]==180
+    assert result['provider_attempts']==2 and result['mode']=='template'
+    assert 'synthetic-secret' not in json.dumps(result)

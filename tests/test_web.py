@@ -75,6 +75,7 @@ def test_report_has_wider_scope_and_includes_censored_comments(exported):
         assert result.json()['report']['mode']=='template'
         assert reporter.call_args.args==(exported.path, 'Students')
         assert reporter.call_args.kwargs['include_censored_comments'] is True
+        assert reporter.call_args.kwargs['retries']==2
         assert result.json()['report']['censored_comment_count']==40
         assert result.json()['report']['input_policy']=='censored_comments_v1'
         assert c.post('/api/reports',headers=HEADERS,json={**body,'county':'Montgomery'}).status_code==422

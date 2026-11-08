@@ -218,6 +218,25 @@
       "minimum": 0,
       "title": "Censored Comment Count",
       "type": "integer"
+    },
+    "provider_attempts": {
+      "default": 0,
+      "maximum": 3,
+      "minimum": 0,
+      "title": "Provider Attempts",
+      "type": "integer"
+    },
+    "provider_http_status": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Provider Http Status"
     }
   },
   "required": [

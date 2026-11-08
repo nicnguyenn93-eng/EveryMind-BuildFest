@@ -124,7 +124,7 @@ def create_app(*, private_root=None, store=None, reporter=generate_report, key_l
         export = datasets.resolve(request.dataset_id)
         result = reporter(export.path, request.audience,
             expected_dataset_key=request.expected_dataset_key, use_llm=request.use_llm, include_censored_comments=True,
-            api_key=key_loader(root), model=DEFAULT_MODEL, retries=0)
+            api_key=key_loader(root), model=DEFAULT_MODEL, retries=2)
         return dict(scope="All surveyed locations · " + request.audience, report=result)
 
     # Only public frontend assets are served. No repository/private-data mount.
