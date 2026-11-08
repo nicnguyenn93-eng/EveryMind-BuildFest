@@ -4,7 +4,7 @@ Two ways in:
   draft_report_from_payload(payload, eligible_actions)   # payload = cleaned_analysis.build_ai_input(...)
   draft_report(evidence, eligible_actions)               # just the quantitative evidence rows
 
-Both send the team prompts (gemini_kit/prompts/system_prompt.md, prompts/semantic_report.md,
+Both send the team prompts (prompts/report_system.md, prompts/semantic_report.md,
 prompts/report_task.md) plus the payload to Gemini, then check the answer:
   - every cited ID exists in the payload,
   - every number in a summary finding comes from the records it cites,
@@ -17,7 +17,7 @@ for API problems, so the app keeps working.
 Approved comment paraphrases are NOT sent unless include_approved_comments=True, matching
 gemini_kit/run_gemini.py (free-tier prompts may be read by Google reviewers).
 
-Setup: pip install -r requirements.txt, then set GEMINI_API_KEY.
+Setup: pip install -r requirements-report.txt, then set GEMINI_API_KEY.
 Try:   python report.py            (live call on the synthetic fixture)
        python report.py --offline  (template only, no API)
 """
@@ -34,7 +34,7 @@ from pydantic import BaseModel, Field
 
 HERE = Path(__file__).parent
 PROMPT_FILES = [
-    HERE / "gemini_kit" / "prompts" / "system_prompt.md",  # role, 988 background, rules
+    HERE / "prompts" / "report_system.md",                # report-specific evidence-ID contract
     HERE / "prompts" / "semantic_report.md",              # team's reporting handoff
     HERE / "prompts" / "report_task.md",                  # rules this file checks
 ]
@@ -69,6 +69,10 @@ class ReportError(Exception):
     """Gemini's answer failed a check."""
 
 
+class MissingAPIKeyError(RuntimeError):
+    """No local credential was supplied."""
+
+
 # ----------------------------------------------------------------- entry points
 def draft_report(evidence: list, eligible_actions: list, **kwargs) -> dict:
     """Convenience wrapper for the app when only quantitative evidence rows are available."""
@@ -94,8 +98,11 @@ def draft_report_from_payload(payload: dict, eligible_actions: list, *, include_
     if not use_llm:
         return template_report(payload, actions, "LLM disabled")
 
+    owned_client = None
     try:
-        client = client or _make_client(api_key)
+        if client is None:
+            owned_client = _make_client(api_key)
+            client = owned_client
         system = "\n\n".join(p.read_text(encoding="utf-8") for p in PROMPT_FILES)
         prompt = build_prompt(sent, actions)
         last = None
@@ -112,7 +119,28 @@ def draft_report_from_payload(payload: dict, eligible_actions: list, *, include_
                     time.sleep(10 * (attempt + 1))
         raise last  # type: ignore[misc]
     except Exception as e:
-        return template_report(payload, actions, f"{type(e).__name__}: {str(e)[:200]}")
+        return template_report(payload, actions, _fallback_reason(e))
+    finally:
+        if owned_client is not None:
+            try:
+                owned_client.close()
+            except Exception:
+                pass  # Cleanup must not replace a validated report or template.
+
+
+def _fallback_reason(error):
+    """Provider exceptions may contain credentials, URLs, or request bodies."""
+    if isinstance(error, ReportError):
+        return "Generated report failed evidence validation."
+    if isinstance(error, MissingAPIKeyError):
+        return "No Gemini API key configured."
+    status = getattr(error, "code", None) or getattr(error, "status_code", None)
+    if not isinstance(status, int):
+        match = re.search(r"\b(400|401|403|404|408|429|500|502|503|504)\b", str(error))
+        status = int(match.group()) if match else None
+    if status:
+        return f"Gemini request failed (HTTP {status}). Check model access, quota, and credentials."
+    return "Gemini unavailable. Check the API key, model, network, and installed app dependencies."
 
 
 # ----------------------------------------------------------------- what leaves the machine
@@ -131,6 +159,8 @@ def safe_payload(payload: dict, include_approved_comments: bool) -> dict:
     comments = []
     if include_approved_comments:
         for c in payload.get("approved_comment_evidence", []):
+            if c.get("dataset_key") not in (None, key) or c.get("audience") not in (None, audience):
+                raise ValueError("Comment evidence scope does not match the current dataset/audience.")
             if c.get("review_status") != "approved_privacy_screened":
                 raise ValueError("Only privacy-screened approved paraphrases may be sent.")
             comments.append({k: c.get(k) for k in ("comment_evidence_id", "source_field", "approved_paraphrase", "theme_ids")})
@@ -148,11 +178,11 @@ def build_prompt(sent: dict, actions: list) -> str:
 
 # ----------------------------------------------------------------- Gemini
 def _make_client(api_key):
-    from google import genai
     key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     if not key:
-        raise RuntimeError("No GEMINI_API_KEY set")
-    return genai.Client(api_key=key)
+        raise MissingAPIKeyError("No GEMINI_API_KEY set")
+    from google import genai
+    return genai.Client(api_key=key, http_options={"timeout": 30000, "retry_options": {"attempts": 1}})
 
 
 def _call_gemini(client, model, system, prompt) -> dict:
@@ -161,10 +191,13 @@ def _call_gemini(client, model, system, prompt) -> dict:
     config = types.GenerateContentConfig(system_instruction=system, response_mime_type="application/json",
                                          response_schema=LLMReport, temperature=0.2)
     resp = client.models.generate_content(model=model, contents=prompt, config=config)
-    parsed = getattr(resp, "parsed", None)
-    if parsed is not None:
-        return parsed.model_dump() if hasattr(parsed, "model_dump") else dict(parsed)
-    return LLMReport.model_validate_json(resp.text).model_dump()
+    try:
+        parsed = getattr(resp, "parsed", None)
+        if parsed is not None:
+            return LLMReport.model_validate(parsed).model_dump()
+        return LLMReport.model_validate_json(resp.text).model_dump()
+    except (ValueError, TypeError):
+        raise ReportError("Invalid report structure") from None
 
 
 # ----------------------------------------------------------------- checks
@@ -191,6 +224,10 @@ def allowed_numbers(records: list) -> List[float]:
 
 
 def validate(raw: dict, sent: dict, actions: list) -> None:
+    try:
+        raw = LLMReport.model_validate(raw).model_dump()
+    except ValueError:
+        raise ReportError("Invalid report structure") from None
     records = {r["evidence_id"]: r for r in sent["quantitative_evidence"]}
     records.update({r["theme_id"]: r for r in sent["qualitative_themes"] if r.get("theme_id")})
     known = set(records) | {c["comment_evidence_id"] for c in sent["approved_comment_evidence"]}
@@ -217,6 +254,8 @@ def validate(raw: dict, sent: dict, actions: list) -> None:
         bad = [x for x in r.get("evidence_ids", []) if x not in known]
         if bad:
             raise ReportError(f"recommendation cites unknown IDs {bad}")
+        if not r.get("evidence_ids"):
+            raise ReportError("recommendation cites nothing")
     if not any("retrospective" in s.lower() for s in raw.get("limitations", [])):
         raise ReportError("limitations must mention retrospective self-report")
 
@@ -267,7 +306,8 @@ def template_report(payload, actions, reason: str) -> dict:
         before = rows.get(eid[: -len("_POST")] + "_BEFORE")
         if not before:
             continue
-        b, p = numbers_in(before["display_value"])[0], numbers_in(post["display_value"])[0]
+        b = before.get("value", numbers_in(before["display_value"])[0])
+        p = post.get("value", numbers_in(post["display_value"])[0])
         blocks.append(f"\"{post['survey_question']}\": agreement went from {before['display_value']} (recalled before) "
                       f"to {post['display_value']} after the training among {post['valid_denominator']} "
                       f"{payload['audience'].lower()}, a {p - b:+.1f} percentage-point change.")
@@ -276,7 +316,7 @@ def template_report(payload, actions, reason: str) -> dict:
         for r in list(rows.values())[:4]:
             blocks.append(f"{r['survey_question']}: {r['display_value']} ({r['valid_denominator']} valid answers).")
             ids.append(r["evidence_id"])
-    act = actions[0]
+    act = actions[0] if rows else {}
     lims = ["Retrospective self-report; descriptive, not causal."] + list(payload.get("limitations", []))
     return {
         "dataset_key": payload.get("dataset_key"),
@@ -284,11 +324,11 @@ def template_report(payload, actions, reason: str) -> dict:
         "mode": "template",
         "summary_blocks": blocks or ["No publishable evidence for this audience."],
         "evidence_ids": ids,
-        "proposed_action_id": act["action_id"],
-        "staff_owner": act.get("staff_owner", ""),
-        "follow_up_measure": act.get("follow_up_measure", ""),
+        "proposed_action_id": act.get("action_id"),
+        "staff_owner": act.get("staff_owner"),
+        "follow_up_measure": act.get("follow_up_measure"),
         "limitations": " ".join(lims),
-        "proposed_action": act.get("proposed_action", act["action_id"]),
+        "proposed_action": act.get("proposed_action", act.get("action_id")),
         "summary": [],
         "proposed_recommendations": [],
         "model": None,

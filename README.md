@@ -268,7 +268,7 @@ censored CSV, independently of the source-file key used for folder names.
 
 The legacy `clean.py` loader and synthetic examples remain for compatibility
 and regression checks. The primary analysis command rejects raw inputs and old
-incomplete exports. The old mock UI and report/PDF scaffolding are not restored.
+incomplete exports. The old mock UI and placeholder PDF exporter remain removed.
 
 Run the combined checks with:
 
@@ -279,3 +279,15 @@ RUN_PRESIDIO_INTEGRATION=1 python -m pytest tests checks everymind_cleaning/chec
 See [analysis handoff](docs/analysis_handoff.md) and
 [Gemini kit](gemini_kit/README.md). The provider SDK remains optional;
 analysis and prompt dry runs do not call a provider.
+
+## Reporting backend for an independent frontend
+
+Nimi's Gemini reporting code is available without her frontend. Install
+`requirements-report.txt`, then use `report_service.get_analysis(...)` and
+`report_service.generate_report(...)` with a verified censored CSV. Reports send
+aggregate evidence by default and fall back to labeled templates on provider or
+validation failures. The primary pipeline dependencies remain unchanged.
+
+See the [frontend/backend contract](docs/frontend_backend_contract.md) for the
+Python signatures, credential setup, state handling, and versioned report JSON
+schema. A frontend can be developed and merged independently of this backend.

@@ -1,0 +1,226 @@
+{
+  "$defs": {
+    "Finding": {
+      "properties": {
+        "text": {
+          "description": "One evidence-based finding in plain language",
+          "title": "Text",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "description": "evidence_id, theme_id or comment_evidence_id values this finding uses",
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "text",
+        "evidence_ids"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "ReportRecommendation": {
+      "additionalProperties": false,
+      "properties": {
+        "action_id": {
+          "description": "One action_id from the eligible actions",
+          "title": "Action Id",
+          "type": "string"
+        },
+        "pilot": {
+          "description": "The proposed pilot, written as a proposal, not an observed finding",
+          "title": "Pilot",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "proposed_staff_owner": {
+          "title": "Proposed Staff Owner",
+          "type": "string"
+        },
+        "follow_up_measure": {
+          "description": "Indicator with a target that future surveys can check",
+          "title": "Follow Up Measure",
+          "type": "string"
+        },
+        "uncertainty": {
+          "description": "What the evidence does not establish",
+          "title": "Uncertainty",
+          "type": "string"
+        },
+        "proposed_action": {
+          "title": "Proposed Action",
+          "type": "string"
+        },
+        "staff_owner": {
+          "title": "Staff Owner",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_id",
+        "pilot",
+        "evidence_ids",
+        "proposed_staff_owner",
+        "follow_up_measure",
+        "uncertainty",
+        "proposed_action",
+        "staff_owner"
+      ],
+      "title": "ReportRecommendation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Versioned JSON boundary consumed by an independently developed frontend.",
+  "properties": {
+    "schema_version": {
+      "const": "everymind.report.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "dataset_key": {
+      "pattern": "^censored-sha256:[0-9a-f]{64}$",
+      "title": "Dataset Key",
+      "type": "string"
+    },
+    "audience": {
+      "title": "Audience",
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "llm",
+        "template"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "summary_blocks": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Summary Blocks",
+      "type": "array"
+    },
+    "evidence_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "proposed_action_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Proposed Action Id"
+    },
+    "proposed_action": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Proposed Action"
+    },
+    "staff_owner": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Staff Owner"
+    },
+    "follow_up_measure": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Follow Up Measure"
+    },
+    "limitations": {
+      "title": "Limitations",
+      "type": "string"
+    },
+    "summary": {
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Summary",
+      "type": "array"
+    },
+    "proposed_recommendations": {
+      "items": {
+        "$ref": "#/$defs/ReportRecommendation"
+      },
+      "title": "Proposed Recommendations",
+      "type": "array"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Model"
+    },
+    "fallback_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Fallback Reason"
+    }
+  },
+  "required": [
+    "schema_version",
+    "dataset_key",
+    "audience",
+    "mode",
+    "summary_blocks",
+    "evidence_ids",
+    "proposed_action_id",
+    "proposed_action",
+    "staff_owner",
+    "follow_up_measure",
+    "limitations",
+    "summary",
+    "proposed_recommendations",
+    "model",
+    "fallback_reason"
+  ],
+  "title": "ReportResult",
+  "type": "object"
+}
