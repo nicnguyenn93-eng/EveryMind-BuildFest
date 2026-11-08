@@ -1003,6 +1003,7 @@ class Result:
     privacy_summary: dict = field(default_factory=dict)
     cleaned_stage: pd.DataFrame = field(default_factory=pd.DataFrame)
     censored_stage: pd.DataFrame = field(default_factory=pd.DataFrame)
+    release_config: dict | None = field(default=None, repr=False)
 
     def __post_init__(self):
         review = self.private.attrs.pop("privacy_review", [])
@@ -1051,7 +1052,14 @@ def write_outputs(result: Result, out_dir, private_dir) -> dict:
     else:
         from output_utils import finalize_outputs
 
-    if not result.checks["pass"].all():
+    if result.release_config is not None:
+        if __package__:
+            from . import release
+        else:
+            import release
+        result.checks = release.release_checks(result.data, result.private, result.release_config, result.audit)
+    severity = result.checks.get("severity", pd.Series("block", index=result.checks.index))
+    if (~result.checks["pass"] & severity.eq("block")).any():
         raise ValueError("Validation failed; no results published. Inspect Result.checks locally.")
     out_dir, private_dir = Path(out_dir), Path(private_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

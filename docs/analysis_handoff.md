@@ -12,8 +12,8 @@ python cleaned_analysis.py private_data/censoring/72b08ff71ede/censored_72b08ff7
 Use the source-file key printed by your run for other inputs. The original
 workbook/CSV stays in `private_data/raw/`, the pre-Presidio checkpoint in
 `cleaned/<key>/`, and the full result in `censoring/<key>/`. On the supplied
-survey these contain 1,299 records: 20 raw columns, 51 cleaned columns, and 77
-censored columns. The last table preserves John's 75-column result, including
+survey these contain 1,299 records: 20 raw columns, 62 cleaned columns, and 90
+censored columns. The last table preserves John's 88-column release result, including
 language/classification metadata, quality flags and derived values, plus
 `source_row` and `original_id`. Original comments are not included there.
 
@@ -23,6 +23,10 @@ match, and pending privacy processing. It does not reopen source files, load
 models, translate, or call an AI provider. An old export can be regenerated
 with the primary command above; the previous 51-column censored file and its
 manifest/guide are archived during that upgrade.
+The release migration also preserves previous 77-column exports and companions
+under `archive/before_release_v1/`. Inferred availability has explicit statuses,
+role flags and quality checks may be nullable, and `comparison_group` retains
+unknown roles. The Python and HTTP report contracts remain unchanged.
 
 The default output is `private_data/reports/<key>/ai_input.json`. Retained
 options are `--audience` (default `All respondents`), `--reviews`, `--output`

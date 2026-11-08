@@ -4,7 +4,7 @@ import argparse
 import logging
 from pathlib import Path
 
-from . import everymind_clean as ec, privacy_adapter
+from . import everymind_clean as ec, privacy_adapter, release
 from .presidio_bridge import PresidioBridge
 from .language_routing import LanguageDetectionError
 from .stage_outputs import write_stage_outputs
@@ -38,7 +38,8 @@ def run(input_path=DEFAULT_INPUT, output_dir=DEFAULT_OUTPUT_DIR, *, bridge=None)
     output_directories("preflight", output_dir)
     bridge = bridge if bridge is not None else PresidioBridge()
     with privacy_adapter.using(bridge, "local Presidio baseline (review required)"):
-        result = ec.run_pipeline(source, SCHEMA, REGISTRY)
+        result = release.run_pipeline(source, SCHEMA, REGISTRY)
+        release.require_ready(result.checks)
         output_directories(result.audit.dataset_key, output_dir)
         paths = write_stage_outputs(result, output_dir, source)
     return result, paths

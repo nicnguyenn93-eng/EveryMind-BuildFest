@@ -76,9 +76,11 @@ Each completed run writes these stages, grouped by its source-file hash prefix:
 | — | `private_data/reports/<key>/` | Cleaning audit, unknown-label review, private distress review, and `manifest.json` listing stage order, files, counts, and hashes. |
 
 On the supplied survey, raw contains 1,299 rows and 20 columns, cleaned has
-1,299 rows and 51 columns, and censored has 1,299 rows and 77 columns: John's
-75-column result plus `source_row` and `original_id`. Shared structured values
-are unchanged. The censored export contains no uncensored comment columns.
+1,299 rows and 62 columns, and censored has 1,299 rows and 90 columns: John's
+88-column release result plus `source_row` and `original_id`. Shared structured
+values match between cleaned and censored. The censored export contains no
+uncensored comment columns. John's release safeguards preserve unknown roles,
+inferred question availability, and unassessable quality checks explicitly.
 
 `private_data/README.md` links to the latest completed run. The stage CSVs share
 `source_row`, `original_id`, and `response_id`; use these to trace a response
@@ -94,6 +96,9 @@ corresponding `__redacted` column in the censored CSV. John's core `Result.data`
 and notebook analysis logic remain available. An existing 51-column censored
 export and its manifest/guide are archived under `archive/censoring_schema_v1/`
 when the full result replaces it. No separate analysis stage is created.
+The subsequent 77-to-90-column release migration archives the previous stage
+files and companions under `archive/before_release_v1/` before replacing them.
+See [cleaning release safeguards](everymind_cleaning/README.md#cleaning-release-safeguards).
 
 The cleaner detects English/Spanish separately for each comment using the local
 Lingua detector, then runs exactly one matching Presidio model. Text detection
@@ -105,7 +110,7 @@ models and rules are unchanged; no translation or LLM hook is enabled.
 See [language routing and review fields](everymind_cleaning/README.md#language-routing)
 for fallback and failure behavior.
 
-All checks and CSV/JSON verification finish before the stage files are published.
+All blocking checks and CSV/JSON verification finish before the stage files are published.
 Ordinary replacement errors restore prior outputs across stage folders. Abrupt
 OS/process termination during multi-file publication is not an atomic transaction.
 All stages are local review data with IDs and metadata retained; redacted text

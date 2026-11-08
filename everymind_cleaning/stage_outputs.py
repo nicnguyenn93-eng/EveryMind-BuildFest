@@ -42,13 +42,16 @@ def write_stage_outputs(result, root, source_path):
     if paths["censored"].is_file():
         with paths["censored"].open(encoding="utf-8-sig", newline="") as handle:
             previous_header = next(csv.reader(handle), [])
-        if {"most_valuable", "improve"} & set(previous_header):
+        if previous_header != list(result.censored_stage.columns):
             fingerprint = hashlib.sha256(paths["censored"].read_bytes()).hexdigest()
-            archive = root / "archive" / "censoring_schema_v1" / key / fingerprint[:12]
-            for name in ("censored", "manifest", "guide"):
+            migration = "censoring_schema_v1" if {"most_valuable", "improve"} & set(previous_header) else "before_release_v1"
+            archive = root / "archive" / migration / key / fingerprint[:12]
+            for name in tuple(paths):
+                if name == "raw_source":
+                    continue
                 if paths[name].is_file():
                     archives[f"archive_{name}"] = paths[name]
-                    paths[f"archive_{name}"] = archive / paths[name].name
+                    paths[f"archive_{name}"] = archive / paths[name].relative_to(root)
     for name, path in paths.items():
         if not path.resolve().is_relative_to(root):
             raise ValueError("An output path escapes the configured data directory.")
@@ -111,6 +114,16 @@ def write_stage_outputs(result, root, source_path):
             "outputs": {name: str(path.relative_to(root)) for name, path in paths.items()},
             "review_required": True,
         }
+        if result.release_config is not None:
+            from . import release
+            config = result.release_config
+            manifest["cleaning_release"] = {
+                "schema_version": release.OUTPUT_SCHEMA_VERSION,
+                "config_sha256": hashlib.sha256(json.dumps(config, sort_keys=True, default=lambda value: sorted(value)).encode()).hexdigest(),
+                "modules_sha256": {module.__name__: hashlib.sha256(Path(module.__file__).read_bytes()).hexdigest()
+                                   for module in (ec, release)},
+                "warnings": result.checks.loc[~result.checks["pass"] & result.checks.severity.eq("warn"), "check"].tolist(),
+            }
         staged["manifest"] = temporary / "manifest.json"
         staged["manifest"].write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
         if json.loads(staged["manifest"].read_text()) != manifest:

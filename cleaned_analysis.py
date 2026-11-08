@@ -40,7 +40,7 @@ def adapt_cleaned(data):
              ("role_caregiver", "Caregiver/parent"), ("role_other", "Community member")]
     if not all(c in data for c, _ in flags):
         raise ValueError("John's cleaned role flags are required.")
-    if any(not pd.api.types.is_bool_dtype(data[c]) or data[c].isna().any() for c, _ in flags):
+    if any(not pd.api.types.is_bool_dtype(data[c]) for c, _ in flags):
         raise ValueError("Role flags must be booleans; read the export with load_censored_export.")
     responses["role_membership"] = data.apply(lambda row: [label for col, label in flags
         if pd.notna(row[col]) and bool(row[col]) and (label == "Student" or row.get("role__status") == "valid")], axis=1)

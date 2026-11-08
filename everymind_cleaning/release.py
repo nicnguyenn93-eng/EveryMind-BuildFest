@@ -196,7 +196,7 @@ def clean_frame(raw, cfg):
     df, private = ec.process_text(df, cfg, audit)
     df = derive_release_fields(flag_quality(df, cfg, audit), cfg, audit)
     checks = release_checks(df, private, cfg, audit)
-    return ec.Result(df, private, audit, checks)
+    return ec.Result(df, private, audit, checks, release_config=cfg)
 
 
 def run_pipeline(source, schema_path, registry_path=None, filename=None):

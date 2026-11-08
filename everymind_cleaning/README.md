@@ -26,8 +26,8 @@ python -m pip install -r everymind_cleaning/requirements-analysis.txt
 jupyter notebook everymind_cleaning/cleaning_pipeline.ipynb
 ```
 
-The notebook imports the same package adapter, connects Presidio, and uses the
-same input and output defaults as the command. Its existing analysis code is
+The notebook imports the same release safeguards and package adapter, connects Presidio, and uses the
+same input and output defaults as the command. John's updated analysis code is
 retained. Saved outputs were cleared so old, disconnected results are not shown
 as current. No translation or LLM suggestion hook is enabled.
 
@@ -37,7 +37,7 @@ The default data root is `private_data/`. Each run keeps a source-file hash key:
 
 - `raw/`: unmodified workbook/CSV. Inputs outside this folder are copied into `raw/<key>/`.
 - `cleaned/<key>/cleaned_<key>.csv`: standardized fields and normalized, uncensored comments before the privacy tool.
-- `censoring/<key>/censored_<key>.csv`: John's full result with `__redacted` comments, classifications, quality flags, derived fields, and two linkage columns (77 columns on this dataset). The cleaned checkpoint remains 51 columns; shared structured fields and row order match.
+- `censoring/<key>/censored_<key>.csv`: John's full release result with `__redacted` comments, classifications, nullable quality flags, derived fields, and two linkage columns (90 columns on this dataset). The cleaned checkpoint has 62 columns; shared structured fields and row order match.
 - `reports/<key>/`: cleaning audit, mapping review, private distress-review subset, and a manifest with stage paths, counts, hashes, and linkage columns.
 
 Presidio's summary sits beside the censored CSV. Its private/ subfolder contains
@@ -58,7 +58,8 @@ rerun the primary pipeline if the reader reports an outdated export/manifest.
 Earlier mixed-layout results are preserved in `archive/previous_censoring/`.
 Standalone full-CSV Presidio runs use `censoring/baseline/` separately.
 
-All checks and staging verification must succeed before publication. Ordinary
+All blocking checks and staging verification must succeed before publication. Low answer
+rates and unrecognized values produce field-specific warnings. Ordinary
 replacement errors restore existing files across folders. Sudden termination
 is not a multi-file atomic transaction. Inputs are never replaced. All stages
 retain local information: uncensored comments remain in raw/cleaned/private files,
@@ -67,11 +68,12 @@ and censored text still needs review. No LLM call is enabled.
 ## Python interface
 
 ```python
-from everymind_cleaning import everymind_clean as ec, presidio_bridge
+from everymind_cleaning import release, presidio_bridge
 from everymind_cleaning.run_pipeline import SCHEMA, REGISTRY
 
 presidio_bridge.connect()
-result = ec.run_pipeline(source, SCHEMA, REGISTRY, filename="export.xlsx")
+result = release.run_pipeline(source, SCHEMA, REGISTRY, filename="export.xlsx")
+release.require_ready(result.checks)
 result.data, result.private, result.audit, result.checks
 result.privacy_review, result.privacy_summary
 result.cleaned_stage, result.censored_stage
@@ -79,6 +81,37 @@ result.cleaned_stage, result.censored_stage
 
 `ec.write_outputs` remains available for the older combined layout. The CLI
 and notebook use `write_stage_outputs` for the stage folders above.
+
+## Cleaning release safeguards
+
+The CLI and web upload jobs use `release.run_pipeline`, wrapping John's core steps.
+Duplicate/ambiguous headers, missing or conflicting IDs, row misalignment, and
+value/status inconsistencies block publication. The publisher revalidates a release
+result before staging files. The older `everymind_clean.run_pipeline` remains a
+core-only comparison entry point.
+
+Exact, alias, and human-approved label matches are applied. Fuzzy and contains
+matches are suggestions for private review. Standard Spanish Likert labels are
+approved in the mapping registry. Numeric scores require whole values or the two
+supported endpoint labels; a Likert code plus label must agree. Multi-select roles
+accept comma or pipe separators only when all parts map. Unknown memberships stay
+nullable, and `comparison_group` preserves an explicit Unknown category.
+
+Dates require ISO 8601; UTC offsets are removed while preserving local wall-clock
+time. CSV ingestion supports UTF-8/UTF-16/cp1252 and comma/semicolon/tab separators,
+while retaining logical source-row provenance across blank records.
+
+`form_version_inferred` replaces `form_version`. Optional-question blanks retain
+observed-blank and session-answer-rate fields; `suspected_not_asked` is an inference,
+not verified form metadata. Unassessable quality checks are NA, and
+`n_quality_checks_assessed` records how many were possible.
+
+The stage manifest records release version, combined configuration hash, module
+hashes, and warning names. Previous 77-column outputs and their companion files are
+preserved under `archive/before_release_v1/` during migration. No new data stage is
+introduced. John's separate comment-free `release.write_release` / `load_clean`
+contract remains available for standalone consumers; the primary workflow uses
+the existing verified, rollback-capable stage publisher.
 
 The original result fields, pipeline arguments, and batch adapter contract are
 retained. `PresidioBridge` loads the shared models once per process. Blank texts
