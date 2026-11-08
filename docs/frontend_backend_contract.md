@@ -116,4 +116,22 @@ The validator checks evidence IDs and numerical consistency, not the correctness
 of every interpretation. Catalog membership is checked; catalog trigger thresholds
 are not automatically evaluated. The offline template currently selects the first
 catalog option when evidence is publishable. Present actions as proposals requiring
-review. Model availability and live credentials still need a live API test.
+review. Live testing with `gemini-3.6-flash` succeeded for the current all-respondent
+aggregate payload; model access and quota can still vary by account.
+
+## Compatibility note for the separate frontend
+
+`origin/netra-frontend` at `3dacc98` was checked without merging its files. It is
+a static HTML site with a Python build step, rather than a Python UI. Its upload
+screen validates a raw workbook locally in the browser, while its displayed
+figures come from prebuilt `gemini_kit/data/` tables and a separate explorer cube.
+Uploading a file there does not run the current cleaning/censoring/report service.
+
+The frontend owner can use this Python interface during a build step, or add a
+small backend HTTP adapter for dynamic reports. No HTTP server or endpoint is
+included in this integration. The current service supports the audiences in
+`analysis.AUDIENCES`; it does not yet provide the frontend's county filter/cube
+contract or an automatic mapping for its `Adults` label. Keep uploaded/current
+dataset results separate from the prebuilt demo tables until that wiring exists.
+A read-only three-way merge preview against this backend found no textual
+conflicts. Neither frontend branch nor frontend files were modified.

@@ -327,5 +327,27 @@ primary runtime pins differ from the pre-integration `ea85075` state. `pip check
 reports no broken requirements. Details are retained in the ignored
 `private_data/reports/72b08ff71ede/nimi_backend_verification.json`.
 
-Live Gemini verification awaits the user's local key entry. No real provider
-request has been made as part of this integration.
+After explicit authorization for the reviewed outbound payload, two live Gemini
+requests using `gemini-3.6-flash` succeeded on their first attempt. Each sent the
+same 15 aggregate evidence records and zero comments. Both returned `mode=llm`,
+passed the report schema and evidence/number checks, and left the censored data
+unchanged. The key is absent from outputs and remains in a Git-ignored local file.
+The initial live request was blocked by automatic approval review before sending;
+the user then explicitly approved the concrete payload and Google Gemini destination.
+
+Live wording review prompted checkpoint `a62d215`: inclusive-OR post-training
+metrics mean **at least one** item, and a neutral post-training response does not
+establish that the respondent remained neutral over time. The prompt also guards
+against inferring student-only findings from all-respondent aggregates. All 28
+focused reporting/service tests passed after that prompt change; no analytical
+calculations or data schemas changed. Reports remain drafts for semantic review,
+especially because the existing catalog's options are student-focused.
+
+Live artifacts are under the ignored `private_data/reports/72b08ff71ede/gemini_live/`
+folders `20261108T045249Z` and `20261108T045524Z`. The backend verification JSON
+records both successful calls and confirms unchanged hashes of the raw inputs,
+cleaned/censored stages, manifest, and saved analysis. The frontend branch
+`origin/netra-frontend` at `3dacc98` was inspected without merging it; a read-only
+merge preview found no textual conflicts with this backend integration. Its
+static HTML/build-time data workflow still needs a separate connection to the
+Python service, as described in the frontend/backend contract.
