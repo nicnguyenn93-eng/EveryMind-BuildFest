@@ -93,6 +93,10 @@ still requires review. Existing results from the earlier mixed layout are in
 `private_data/archive/previous_censoring/`. Standalone Presidio results are kept
 separately in `private_data/censoring/baseline/`.
 
+Use a separate output root for concurrent experiments or another agent's runs,
+for example `--output-dir private_data/language_experiments`. Each root has its
+own raw/cleaned/censoring folders and manifests, avoiding shared result replacement.
+
 See [everymind_cleaning/README.md](everymind_cleaning/README.md) for the notebook
 and Python interfaces, and [INTEGRATION_REVIEW.md](INTEGRATION_REVIEW.md) for
 compatibility checks and remaining detection problems.

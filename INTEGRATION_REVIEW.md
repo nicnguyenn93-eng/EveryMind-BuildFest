@@ -100,10 +100,10 @@ checks block network connections, downloads, and GPU activation.
 Final combined run: **46 tests passed**, including both installed-model offline
 checks and John's ten cleaning checks (plus thirteen unittest subtests).
 
-## Stage layout update
+## Three-stage layout verification before the main merge
 
 The earlier verification above describes the original combined export and is
-retained in the archive. Current runs publish separate raw, cleaned, and censored
+retained in the archive. At this checkpoint, runs published separate raw, cleaned, and censored
 stages under private_data/, with audits and manifests in
 reports/. Cleaned/censored tables have the same schema and differ only in comment
 values. Both retain source-row and original-ID linkage. John's Result.data
@@ -134,3 +134,64 @@ linkage after duplicate removal, comment-only changes, source mutation rejection
 and rollback across folders on a late publication failure. All 51 notebook code
 cells parse, saved outputs are empty, and the existing analysis cells remain
 unchanged. The optional analysis notebook was not executed.
+
+## Main merge and censored-CSV analysis (current)
+
+Merged `origin/main` at `1a71d0e` into `security-check` with merge checkpoint
+`8f6cfaf`; integration checkpoint `26267a8` connects its analysis to the censored
+export. Main's statistics, feedback calculations, codebook and semantic approval
+rules are unchanged. The legacy loader/configuration and synthetic fixtures were
+restored for compatibility; the old mock UI and report/PDF stubs remain excluded.
+The existing pinned runtime is retained, with an explicit Pydantic dependency for
+citation schemas. `pip check` reports no broken requirements. The Gemini SDK is
+still optional.
+
+The raw → cleaned → censoring flow retains 1,299 records. Raw remains 20 columns,
+the pre-Presidio checkpoint remains 51, and the censored CSV is now 77: John's full
+75-column result plus source-row and original-ID linkage. Every field of its
+75-column core matches the earlier integrated result. All shared structured
+values, all 2,598 review entries and the original source hashes match. The same
+76 comment fields changed, with 83 detections, 1,638 unchanged nonblank comments
+and 884 blanks. Calling likelihood retains 293 scores, 1,006 blanks and four
+zeros. Detection counts still do not measure accuracy.
+
+The v2 stage manifest records column names, scalar types and file hashes. The
+analysis reader restores booleans/numbers without losing IDs or zeros and rejects
+raw, old, incomplete, changed or pending exports. Its dataset key hashes the exact
+censored CSV. All six audiences produce identical quantitative evidence to main's
+original adapter. The real-data keyword counts also match in this run, although
+censored wording can change them in other runs. Language routing and analytical
+cleaning functions were verified unchanged.
+
+Analysis succeeded with reads of raw/private-original folders and network access
+blocked. The generated payload has 15 quantitative evidence rows, no approved
+comment evidence, and the unchanged `everymind.analysis.v2` schema. A separate
+pending packet contains 1,714 nonblank censored comments; all remain unapproved.
+Review fingerprints now bind censored wording. Gemini's current-payload dry run
+also succeeded with network/DNS blocked, without historical-cohort tables or
+human findings. No provider call was made.
+
+The previous 51-column censored export, manifest and guide are archived under
+`private_data/archive/censoring_schema_v1/`. All 29 pre-merge private artifacts
+remain available with matching hashes. Real data and generated files remain
+Git-ignored, and neither local main nor origin/main was changed. Detailed local
+evidence is in `private_data/reports/72b08ff71ede/main_merge_verification.json`.
+
+Final verification passed **94 tests and 13 subtests** across our tests, main's
+analysis checks and John's ten real-data checks, including installed EN/ES model
+checks with network/download/GPU use blocked. Regression coverage includes typed
+CSV round trips, leading-zero IDs, blanks and zeros, optional columns, duplicate
+IDs, stale fingerprints, legacy-export archival, rollback across stage and
+analysis files, malformed manifests, and conflicting output filenames. The raw
+input CLI rejection also preserved the existing real analysis payload. All 51
+notebook code cells parse and the existing analysis cells remain unchanged; the
+optional analysis notebook was not executed.
+
+A final integrity recheck found the live censored CSV had reverted to the exact
+pre-merge 51-column bytes while the v2 manifest still described 77 columns. The
+writer was not identified. The stale copy was preserved under
+`archive/censored_recovery/`, and the verified 77-column bytes matching both the
+manifest and analysis dataset hash were restored. All real-data checks then
+passed again. Concurrent experiments should use their own `--output-dir` so
+they do not replace the primary run. The reader correctly rejects mismatched
+files instead of silently analyzing them.
