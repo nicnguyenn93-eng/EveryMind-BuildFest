@@ -34,7 +34,7 @@ def test_cleaning_adapter_and_aggregate_payload_no_text_or_identity():
     scenario = next(t for t in improve["keyword_matches"] if t["theme_id"] == "THEME_SCENARIOS")
     assert scenario["count"] == 10 and scenario["scanned_denominator"] == 20
     assert scenario["review_status"] == "unreviewed_keyword_match"
-    assert result["schema_version"] == "everymind.analysis.v1"
+    assert result["schema_version"] == "everymind.analysis.v2"
     assert all("action" not in key for key in result)
 
 

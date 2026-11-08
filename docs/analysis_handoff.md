@@ -2,6 +2,29 @@
 
 ## Single JSON input for the AI owner
 
+### Semantic comment evidence (schema v2)
+
+Keyword counts alone are insufficient for interpreting what respondents mean. The payload now includes `approved_comment_evidence`: privacy-screened, approved paraphrases carrying opaque `comment_evidence_id`, source field, and publishable theme IDs. Raw comments, response IDs and fingerprints remain local. The reporting AI can summarize and propose evidence-cited recommendations from this input; analysis modules themselves do not choose actions or call a provider. Recommendations remain proposed, not proven effective or formally approved.
+
+Prepare the actual local comments for review with:
+
+```bash
+python cleaned_analysis.py "C:/Users/nickn/Downloads/BuildFest_EveryMind_Survey_Data_FULL.xlsx" \
+  --prepare-review --output everymind_cleaning/outputs/ai_input.json
+```
+
+This creates `everymind_cleaning/private/comment_review_pending.json`, containing original comments for local review only. It never auto-approves text and refuses to overwrite an existing packet. Apply the team's privacy screening and check meaning, names, places and indirect identifiers. Enter a safe `approved_paraphrase`, appropriate `theme_ids`, `reviewer_status="approved"`, `privacy_screened=true`, and the SHA-256 of that exact paraphrase in `approved_paraphrase_fingerprint`. Preserve the source `content_fingerprint`. Save the reviewed version privately, then run:
+
+```bash
+python cleaned_analysis.py "C:/Users/nickn/Downloads/BuildFest_EveryMind_Survey_Data_FULL.xlsx" \
+  --reviews everymind_cleaning/private/comment_review_approved.json \
+  --output everymind_cleaning/outputs/ai_input.json
+```
+
+The paraphrase fingerprint binds approval to the exact reviewed wording; it does not detect identifiers itself. The operator remains responsible for privacy and meaning approval. Edited source text, edited paraphrases without renewed approval, absent screening, wrong fields, and suppressed themes are excluded. Only comments belonging to publishable approved themes can be included. At most 50 qualifying examples per field are sent, in review-file order; metadata describes this illustrative sample. Use the separate reviewed theme counts for frequency, not the number of selected examples. Other themes can be added to the codebook after review rather than forcing comments into initial categories.
+
+Every run that releases paraphrases writes a separate `ai_lineage_*.json` under the ignored private folder, linking opaque citation IDs to current local records. Keep the lineage file with that specific AI payload; never send it to the provider. Do not put outbound payloads containing paraphrases in shared folders without checking the approved release. No real comments have been approved by this code, and no provider call has been made.
+
 Run `cleaned_analysis.py` to execute John's cleaner, map its cleaned contract, and create one aggregate-only JSON file. From Git Bash at the repository root:
 
 ```bash
@@ -25,7 +48,7 @@ import json
 provider_input_text = json.dumps(payload, ensure_ascii=False, allow_nan=False)
 ```
 
-No raw text, redacted text, paraphrases, respondent IDs, input filenames, distress flags, or credentials are included. Codebook names are fixed project labels, not extracted snippets. `interpretation_rules` explicitly prohibit treating unreviewed signals as verified prevalence, causal explanations, recommendation eligibility, or statistical significance. The AI owner must preserve these distinctions and validate its response. This interface supplies evidence; it neither calls AI nor selects recommendations.
+No raw text, respondent IDs, input filenames, distress flags, or credentials are included. Schema v2 can include explicitly approved privacy-screened paraphrases as described above. Codebook names are fixed project labels. `interpretation_rules` prohibit treating unreviewed signals as verified prevalence, causal explanations, recommendation eligibility, or statistical significance. The AI owner must preserve these distinctions and validate its response. This interface supplies evidence; it neither calls AI nor selects recommendations.
 
 `analysis.py` owns descriptive statistics and the combined analysis object. `feedback.py` owns local coding suggestions and reviewed thematic counts. Neither module calls an LLM or chooses actions. `metrics.py` is a compatibility import pointing to `analysis.build_evidence`; it contains no competing calculations. The current Streamlit interface remains a separate mock and has not been wired to these modules.
 

@@ -33,7 +33,7 @@ Open the local URL printed by Streamlit (normally `http://localhost:8501`). Stop
 | `app.py` | Streamlit UI scaffold; backend imports are commented out. |
 | `clean.py`, `export_columns.json` | Actual-export XLSX/CSV import, text-score normalization, role membership, private comments, duplicate-ID rejection, and audit. Not yet connected to the UI; county alias mapping remains. |
 | `analysis.py` | Descriptive paired knowledge statistics, recommendation/intent, coverage, group comparisons, and combined analysis JSON. See [analysis handoff](docs/analysis_handoff.md). |
-| `cleaned_analysis.py` | Runs John's cleaner and generates one aggregate AI-input JSON, including separately labeled exploratory open-response analysis. |
+| `cleaned_analysis.py`, `comment_evidence.py` | Runs John's cleaner and generates AI-input JSON with statistics, exploratory counts, and explicitly approved privacy-screened paraphrases; private review and citation lineage remain local. |
 | `metrics.py` | Compatibility import for `analysis.build_evidence`. |
 | `feedback.py`, `codebook.json` | Local pending coding suggestions and fingerprint-matched, reviewed theme counts. Search and identifier screening remain separate work. |
 | `report.py`, `action_catalog.json`, `prompts/` | Report stub and draft action rules; validation, provider, and fallback remain. |
