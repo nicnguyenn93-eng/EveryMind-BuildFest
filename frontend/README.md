@@ -11,24 +11,26 @@ so the whole thing also works from a file:// path or any static host.
 
 ## What's on the page
 
-The page opens on a setup screen; the report is built only after it is filled in.
+**The landing page** says what the tool is for, what it reads, what it checks and what you get,
+and takes one input: the survey export. Two formats are accepted — `.xlsx` (the survey tool's own
+Excel export) and `.csv` (UTF-8, column names in the first row). The file is read **in the browser**:
+row count, column count, a check against the 20 columns in `../export_columns.json`, and a local
+SHA-256. Nothing is uploaded. A link beside it continues with the prepared dataset instead.
 
-| Step | What it asks for |
-|---|---|
-| 1 | The survey export (`.xlsx` or `.csv`). It is read **in the browser** — row count, column count, and a check against the 20 columns in `../export_columns.json`, plus a local SHA-256. Nothing is uploaded. A link beside it continues with the prepared dataset instead. |
-| 2 | The audience: all respondents, students, or adults. |
-| 3 | The jurisdiction. Combinations with fewer than 10 responses are disabled, so no figure can be built from a group that small. |
+The `.xlsx` reader is about 40 lines on top of the browser's own `DecompressionStream`; a workbook
+is a zip, and only the first row of the first sheet is needed.
 
-The `.xlsx` reader is about 40 lines on top of the browser's own `DecompressionStream`;
-a workbook is a zip, and only the first row of the first sheet is needed.
+Reading a file shows a spinner, and **Generate the report** runs a staged loading overlay
+(reading → checking columns → building findings → drawing charts) before the report appears.
 
-Then the report itself:
+**The report** opens on everything — all respondents, all of Maryland — and carries its own view
+control if you want to narrow it afterwards:
 
 | Section | What it is |
 |---|---|
-| At a glance | Six tiles for the chosen group: responses, sessions, knowledge, NPS, call-item coverage. |
-| Key insights | Six findings, each with its own small chart. Each card carries a scope chip, because some measures exist only statewide or only for all respondents — the chip says which. |
-| Key recommendations | Seven actions, each with the evidence it rests on, an owner, and the measure that would show whether it worked; the ones bearing on the current selection are marked. |
+| At a glance | Six tiles: responses, sessions, knowledge, NPS, call-item coverage. Above them, a control to switch audience (all / students / adults) and jurisdiction; combinations under 10 responses are disabled, so no figure can come from a group that small. |
+| Key insights | Six findings, each with its own chart. Each card carries a scope chip, because some measures exist only statewide or only for all respondents — the chip says which. |
+| Key recommendations | Seven actions, each with the evidence it rests on, an owner, and the measure that would show whether it worked; the ones bearing on the current view are marked. |
 | Interactive map | The 988 Survey Explorer, embedded, opened on the same county and role as the report when the browser allows the two pages to talk (it does over http; a `file://` page may not). |
 | Method and limits | What the numbers are, what they are not, and the cleaning decisions behind them. |
 
