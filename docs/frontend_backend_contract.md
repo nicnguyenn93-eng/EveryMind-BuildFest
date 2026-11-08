@@ -119,10 +119,12 @@ catalog option when evidence is publishable. Present actions as proposals requir
 review. Live testing with `gemini-3.6-flash` succeeded for the current all-respondent
 aggregate payload; model access and quota can still vary by account.
 
-## Compatibility note for the separate frontend
+## Compatibility note for Netra's frontend
 
-`origin/netra-frontend` at `3dacc98` was checked without merging its files. It is
-a static HTML site with a Python build step, rather than a Python UI. Its upload
+Netra's frontend at `3dacc98` was published to main by PR #1 (`1e0f8d8`) while
+this backend was being verified. That upstream publication is preserved without
+editing any frontend files. It is a static HTML site with a Python build step,
+rather than a Python UI. Its upload
 screen validates a raw workbook locally in the browser, while its displayed
 figures come from prebuilt `gemini_kit/data/` tables and a separate explorer cube.
 Uploading a file there does not run the current cleaning/censoring/report service.
@@ -134,4 +136,5 @@ included in this integration. The current service supports the audiences in
 contract or an automatic mapping for its `Adults` label. Keep uploaded/current
 dataset results separate from the prebuilt demo tables until that wiring exists.
 A read-only three-way merge preview against this backend found no textual
-conflicts. Neither frontend branch nor frontend files were modified.
+conflicts; the subsequent merge of the new main also completed without conflicts.
+Neither frontend branch nor frontend files were modified by the reporting changes.

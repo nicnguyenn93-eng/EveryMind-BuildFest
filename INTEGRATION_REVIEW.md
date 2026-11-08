@@ -351,3 +351,14 @@ cleaned/censored stages, manifest, and saved analysis. The frontend branch
 merge preview found no textual conflicts with this backend integration. Its
 static HTML/build-time data workflow still needs a separate connection to the
 Python service, as described in the frontend/backend contract.
+
+During publication, a normal push was rejected because main had advanced to
+`1e0f8d8`, which publishes Netra's frontend through PR #1. Checkpoint `bc1bdd4`
+merges that concurrent main update without conflicts. All `frontend/` files
+remain byte-identical to the upstream publication, and Nimi's `app.py` and UI
+tests remain excluded. The current main tree contains Netra's static frontend
+alongside the reporting backend; a dynamic HTTP or build-time data connection is
+still a separate step. Primary runtime dependency pins remain unchanged.
+The combined 134-test / 67-subtest suite passed again after this merge with all
+DNS/socket access blocked. No additional live calls were needed because the
+backend and its approved aggregate payload were unchanged by the upstream merge.
