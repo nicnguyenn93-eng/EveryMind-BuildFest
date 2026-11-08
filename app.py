@@ -1,200 +1,190 @@
-import streamlit as st
-import pandas as pd
 import io
+import json
+import os
+from pathlib import Path
 
-# Import your team's modules
-# (Once clean.py, metrics.py, feedback.py, report.py, and export_pdf.py are filled out)
-# from clean import load_export
-# from metrics import build_evidence
+import pandas as pd
+import streamlit as st
+
+from analysis import AUDIENCES, analyze_data
+from clean import load_export
+from report import draft_report_from_payload
 # from feedback import search_feedback
-# from report import draft_report
 # from export_pdf import generate_pdf_bytes
 
-st.set_page_config(
-    page_title="EveryMind Training Improvement Assistant",
-    page_icon="🧠",
-    layout="wide"
-)
+ACTION_CATALOG = json.loads((Path(__file__).parent / "action_catalog.json").read_text(encoding="utf-8"))
+AUDIENCE_OPTIONS = ["All respondents"] + sorted(AUDIENCES - {"All respondents"})
+
+
+def gemini_key():
+    """API key from the environment or .streamlit/secrets.toml (both git-ignored)."""
+    if os.environ.get("GEMINI_API_KEY"):
+        return os.environ["GEMINI_API_KEY"]
+    try:
+        return st.secrets.get("GEMINI_API_KEY")
+    except Exception:
+        return None
+
+
+def current_analysis(audience):
+    """Aggregate analysis for the loaded file and audience, computed once and reused."""
+    cache = st.session_state.analysis_cache
+    if audience not in cache:
+        payload = analyze_data(st.session_state.df_responses, st.session_state.dataset_key,
+                               audience, st.session_state.df_private_comments)
+        payload["schema_version"] = "everymind.analysis.v2"
+        cache[audience] = payload
+    return cache[audience]
+
+
+st.set_page_config(page_title="EveryMind Training Improvement Assistant", page_icon="🧠", layout="wide")
 
 # -----------------------------------------------------------------------------
-# 1. SESSION STATE INITIALIZATION
+# 1. SESSION STATE
 # -----------------------------------------------------------------------------
-if "dataset_key" not in st.session_state:
-    st.session_state.dataset_key = None
-if "df_responses" not in st.session_state:
-    st.session_state.df_responses = None
-if "df_private_comments" not in st.session_state:
-    st.session_state.df_private_comments = None
-if "active_report" not in st.session_state:
-    st.session_state.active_report = None
+for name, default in [("dataset_key", None), ("df_responses", None), ("df_private_comments", None),
+                      ("active_report", None), ("analysis_cache", {}), ("filename", None)]:
+    if name not in st.session_state:
+        st.session_state[name] = default
 
-# -----------------------------------------------------------------------------
-# 2. HEADER & JOURNEY TRACKER
-# -----------------------------------------------------------------------------
 st.title("🧠 EveryMind Training Improvement Assistant")
 st.caption("BuildFest 2026 Live Workspace")
 
 # -----------------------------------------------------------------------------
-# 3. WORKBOOK IMPORT SIDEBAR (Role 1)
+# 2. STEP 1: UPLOAD THE ORIGINAL SURVEY EXPORT (first thing on the page)
 # -----------------------------------------------------------------------------
-st.sidebar.header("1. Data Ingestion")
-uploaded_file = st.sidebar.file_uploader(
-    "Upload Survey Export (XLSX or CSV)",
-    type=["xlsx", "csv"],
-    help="Must contain the structural ID and knowledge fields."
-)
+with st.container(border=True):
+    st.subheader("Step 1 · Upload the original survey export")
+    uploaded_file = st.file_uploader(
+        "Original EveryMind survey export (XLSX or CSV). It is cleaned and analyzed on this computer; "
+        "only aggregate numbers are sent to the AI.",
+        type=["xlsx", "csv"],
+    )
 
 if uploaded_file is not None:
-    file_bytes = uploaded_file.getvalue()
-    filename = uploaded_file.name
-
-    # Mocking Role 1 call for boilerplate verification
-    # In production, replace with:
-    # current_key, df_resp, df_priv, audit = load_export(file_bytes, filename)
-    current_key = f"DS_{hash(filename) % 10000}"
-
-    # Atomic State Reset if a brand new file is uploaded
-    if st.session_state.dataset_key != current_key:
+    try:
+        current_key, df_resp, df_priv, audit = load_export(uploaded_file.getvalue(), uploaded_file.name)
+    except Exception as e:
+        st.error(f"Could not read this file: {e}")
+        st.stop()
+    if st.session_state.dataset_key != current_key:  # new file: reset everything derived from the old one
         st.session_state.dataset_key = current_key
-        # Create a tiny mock dataframe to let UI elements render before clean.py is wired
-        st.session_state.df_responses = pd.DataFrame({"role": ["Student"] * 12 + ["School staff"] * 5})
-        st.session_state.active_report = None  # Invalidate stale report
-        st.sidebar.success(f"Loaded: {filename} ({current_key})")
+        st.session_state.df_responses = df_resp
+        st.session_state.df_private_comments = df_priv  # stays local; never sent to the AI
+        st.session_state.active_report = None
+        st.session_state.analysis_cache = {}
+        st.session_state.filename = uploaded_file.name
+    st.success(f"Loaded **{st.session_state.filename}**: {len(st.session_state.df_responses)} responses.")
 else:
-    # Clear state if file is removed
     st.session_state.dataset_key = None
     st.session_state.df_responses = None
+    st.session_state.df_private_comments = None
     st.session_state.active_report = None
+    st.session_state.analysis_cache = {}
 
-# -----------------------------------------------------------------------------
-# 4. AUDIENCE SELECTION (Role 1 / User Question Constraint)
-# -----------------------------------------------------------------------------
-st.sidebar.header("2. Analysis Parameters")
-selected_audience = st.sidebar.selectbox(
-    "Select Target Audience",
-    options=["Students", "School staff", "All respondents"],
-    disabled=st.session_state.dataset_key is None
-)
-
-# -----------------------------------------------------------------------------
-# 5. MAIN INTERFACE WORKFLOW
-# -----------------------------------------------------------------------------
 if st.session_state.dataset_key is None:
-    st.info("👋 Welcome! Please upload an Excel or CSV survey export file in the sidebar to begin the evaluation workflow.")
-else:
-    # Main Workflow Tabs
-    tab_explore, tab_report = st.tabs(["🔍 Feedback Explorer", "📄 Executive Report & Action Plan"])
+    st.info("👆 Upload the original survey export to start. Nothing else happens until a file is loaded.")
+    st.stop()
 
-    # -------------------------------------------------------------------------
-    # TAB 1: EXPLORE RELEVANT FEEDBACK (Role 2)
-    # -------------------------------------------------------------------------
-    with tab_explore:
-        st.header(f"Explore Feedback for: {selected_audience}")
+# -----------------------------------------------------------------------------
+# 3. STEP 2: AUDIENCE
+# -----------------------------------------------------------------------------
+selected_audience = st.selectbox("Step 2 · Choose the audience to analyze", AUDIENCE_OPTIONS)
+payload = current_analysis(selected_audience)
+evidence = payload["quantitative_evidence"]
 
-        # User Question Free-Text Intent Routing
-        search_query = st.text_input(
-            "Search open-text student comments (e.g., type 'teachers' to route to School Staff context):",
-            placeholder="Type your search queries here..."
-        )
+if not evidence:
+    st.warning(f"Not enough valid responses to report on **{selected_audience}** "
+               "(groups under 10 people are withheld for privacy). Choose another audience.")
+    st.stop()
 
-        # Explicit choice intercept requested by user schema
-        if "teacher" in search_query.lower():
-            st.warning("⚠️ **System Hint:** Your search references 'teachers'. Would you like to explicitly shift your audience selection to **School staff** to match survey records?")
-            if st.button("Switch Audience to School staff"):
-                st.rerun()
+tab_report, tab_explore = st.tabs(["📄 Report & Action Plan", "🔍 Evidence & Feedback"])
 
-        # Quantitative Metrics Cards Grid
-        st.subheader("Current Aggregate Performance Metrics")
-        col1, col2, col3 = st.columns(3)
+# -----------------------------------------------------------------------------
+# TAB 1: REPORT AND ACTION PLAN
+# -----------------------------------------------------------------------------
+with tab_report:
+    st.header(f"Report & action plan · {selected_audience}")
 
-        # Mocking metrics data structure from metrics.py
-        with col1:
-            st.metric(label="988 Post-Training Agreement", value="90.5%", delta="+2.3%")
-            with st.expander("Show evidence"):
-                st.json({
-                    "evidence_id": "EV_988_POST_01",
-                    "question": "post-training agreement on explaining 988",
-                    "counts": "1,175 of 1,299 valid responses",
-                    "limitations": "none"
-                })
-        with col2:
-            st.metric(label="Recommendation Score (Mean)", value="8.4 / 10")
-            with st.expander("Show evidence"):
-                st.caption("Source: Q14 Recommendation Rating. Denominator: 1,299.")
-        with col3:
-            st.metric(label="Processed Theme Coverage", value="94.1%", delta="-0.5% flagged")
-            with st.expander("Show evidence"):
-                st.caption("1,222 text rows reviewed. 77 suppressed via local paraphrase rules.")
+    report = st.session_state.active_report
+    if report is not None and (report.get("dataset_key") != st.session_state.dataset_key
+                               or report.get("audience") != selected_audience):
+        st.session_state.active_report = None  # a report belongs to one file and one audience
 
-        # Text/Comment Panel
-        st.subheader("Paraphrased Theme Distribution (Privacy Preserved)")
-        st.markdown("*Displaying approved summaries matching local privacy codebook configurations*")
+    if st.session_state.active_report is None:
+        if not gemini_key():
+            st.caption("No GEMINI_API_KEY found, so the report will use the non-AI template.")
+        if st.button("🚀 Generate report", type="primary"):
+            with st.spinner("Sending aggregate evidence to Gemini and checking every number..."):
+                st.session_state.active_report = draft_report_from_payload(
+                    payload, ACTION_CATALOG, api_key=gemini_key())
+            st.rerun()
 
-        # Sample structured view
-        mock_comments = [
-            {"Theme": "Interactive Exercises", "Paraphrase": "Students requested more hands-on roleplay scenarios for 988 calls.", "Count": 14},
-            {"Theme": "Pacing", "Paraphrase": "General agreement that introduction sequence was clear and appropriately timed.", "Count": 11}
-        ]
-        st.table(pd.DataFrame(mock_comments))
+    r = st.session_state.active_report
+    if r is not None:
+        if r["mode"] == "llm":
+            st.success(f"AI-drafted report ({r['model']}). Every number was checked against the evidence.")
+        else:
+            st.warning(f"Template report (no AI). Reason: {r['fallback_reason']}")
 
-    # -------------------------------------------------------------------------
-    # TAB 2: GENERATE REPORT & EXPORT PDF (Role 3 & Role 4)
-    # -------------------------------------------------------------------------
-    with tab_report:
-        st.header("Executive Action Planner")
-        st.markdown("Propose data-driven pilots and generate printable artifacts for the Training Lead.")
+        with st.container(border=True):
+            st.subheader("🎯 Proposed action")
+            st.markdown(f"**{r['proposed_action']}**")
+            c_owner, c_measure = st.columns(2)
+            c_owner.markdown(f"👤 **Staff owner:** {r['staff_owner']}")
+            c_measure.markdown(f"📈 **Success measure:** {r['follow_up_measure']}")
 
-        # Parameter Mutation Invalidation Check
-        if st.session_state.active_report is None:
-            if st.button("🚀 Generate Report", type="primary"):
-                with st.spinner("Orchestrating non-private evidence tokens via LLM Provider API..."):
-                    # Mocking Role 3 draft_report logic
-                    st.session_state.active_report = {
-                        "summary": "Student confidence benchmarks met the 90% target, but secondary metrics indicate structural requests for applied simulation exercises.",
-                        "action_id": "ACT_PILOT_ROLEPLAY",
-                        "proposed_action": "Launch a 988 Scenario Roleplay Pilot",
-                        "owner": "Training Lead",
-                        "measure": "Proportion of students successfully completing the interactive roleplay scenario in the next cohort.",
-                        "limitations": "Excludes historical data metrics due to unmapped county aliases."
-                    }
-                    st.rerun()
-            else:
-                st.info("Parameters have changed or report has not been compiled yet. Click 'Generate Report' above.")
+        st.subheader("Summary")
+        for block in r["summary_blocks"]:
+            st.write(block)
 
-        # Display Compiled Active Report
-        if st.session_state.active_report is not None:
-            st.success("Report generation complete!")
+        if r.get("proposed_recommendations"):
+            st.subheader("Proposed pilots")
+            for rec in r["proposed_recommendations"]:
+                with st.expander(rec["proposed_action"]):
+                    st.markdown(rec["pilot"])
+                    st.markdown(f"**Owner:** {rec['staff_owner']}  \n**Measure:** {rec['follow_up_measure']}")
+                    st.caption(f"Uncertainty: {rec['uncertainty']}")
+                    st.caption("Evidence: " + ", ".join(rec["evidence_ids"]))
 
-            # Action Box Layout
-            with st.container(border=True):
-                st.subheader("🎯 Proposed Strategic Action")
-                st.markdown(f"**Action Item:** {st.session_state.active_report['proposed_action']}")
+        st.caption(f"**Limitations:** {r['limitations']}")
+        if st.button("↻ Regenerate"):
+            st.session_state.active_report = None
+            st.rerun()
 
-                c_owner, c_measure = st.columns(2)
-                with c_owner:
-                    st.markdown(f"👤 **Staff Owner:** {st.session_state.active_report['owner']}")
-                with c_measure:
-                    st.markdown(f"📈 **Success Measure:** {st.session_state.active_report['measure']}")
+        # PDF export (Role 4) is still a placeholder until export_pdf.py is implemented.
+        st.markdown("---")
+        st.download_button("📥 Download report (JSON)", data=json.dumps(r, indent=2, ensure_ascii=False),
+                           file_name=f"everymind_report_{selected_audience.replace(' ', '_').replace('/', '_')}.json",
+                           mime="application/json")
 
-            # Summary Narrative Text
-            st.subheader("Executive Narrative Summary")
-            st.write(st.session_state.active_report["summary"])
+# -----------------------------------------------------------------------------
+# TAB 2: EVIDENCE AND FEEDBACK (real numbers from the uploaded file)
+# -----------------------------------------------------------------------------
+with tab_explore:
+    st.header(f"Evidence · {selected_audience}")
+    def find(suffix):
+        return next((e for e in evidence if e["evidence_id"].endswith(suffix)), None)
 
-            st.caption(f"**Data Limitations & Caveats:** {st.session_state.active_report['limitations']}")
+    cards = [("Can describe 988 (after)", find("EXPLAIN_988_POST"), find("EXPLAIN_988_CHANGE")),
+             ("Know when to use 988 (after)", find("WHEN_988_POST"), find("WHEN_988_CHANGE")),
+             ("Recommendation (0–10)", find("RECOMMENDATION_MEAN"), None)]
+    cols = st.columns(3)
+    for col, (label, e, change) in zip(cols, cards):
+        with col:
+            if e is None:
+                st.metric(label, "withheld")
+                continue
+            st.metric(label, e["display_value"], delta=change["display_value"] if change else None)
+            st.caption(f"{int(e['valid_denominator'])} valid answers · {e['caveat']}")
 
-            # PDF Downloader Implementation (Role 4)
-            st.markdown("---")
-            st.subheader("Download Executive Artifact")
+    st.subheader("All evidence sent to the AI")
+    table = pd.DataFrame(evidence)[["evidence_id", "survey_question", "display_value", "valid_denominator", "caveat"]]
+    st.dataframe(table, hide_index=True, use_container_width=True)
 
-            # Create sample dummy PDF stream for testing the download wrapper button
-            pdf_buffer = io.BytesIO()
-            pdf_buffer.write(b"%PDF-1.4 Mock Reportlab PDF Output Buffer Data Stream")
-            pdf_buffer.seek(0)
-
-            st.download_button(
-                label="📥 Download One-Page Executive PDF",
-                data=pdf_buffer,
-                file_name=f"EveryMind_Executive_Report_{st.session_state.dataset_key}.pdf",
-                mime="application/pdf",
-                help="Generates tight, high-contrast canvas layout via ReportLab stream."
-            )
+    st.subheader("Open-answer themes")
+    if payload["qualitative_themes"]:
+        st.dataframe(pd.DataFrame(payload["qualitative_themes"]), hide_index=True, use_container_width=True)
+    else:
+        st.info("No reviewed comment themes yet. Themes appear here after a team member approves "
+                "paraphrased comments; until then, reports use the numbers only.")
