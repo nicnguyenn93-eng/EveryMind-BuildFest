@@ -5,6 +5,46 @@ the existing local Presidio engine is connected through its batch adapter. No
 new detection rules, allowlists, language algorithm, translation, or LLM call
 were added. These results are for local review, not an anonymity certification.
 
+## Language routing verification (`language-fix`)
+
+The shared cleaner now uses pinned, offline Lingua 2.1.1 with English and Spanish
+only, a configured 0.80 confidence threshold, and one Presidio model per comment.
+All form fallbacks are explicitly flagged in the private review. Detector
+failures stop processing instead of silently reverting to the form language.
+The historical integration results below retain their original routing policy.
+
+The comparison retained all 1,299 records, all 2,598 comment review entries, all
+cleaned values, verbatim originals, row linkage, and source hashes. CSV/workbook
+results match. A complete real-model workbook run used blocked network, model
+downloads, and GPU activation. Identical-input replay of its detections was used
+for subsequent format parity checks, avoiding duplicate model inference.
+
+| Routing measure | Previous heuristic | Lingua routing |
+| --- | ---: | ---: |
+| Nonblank comments | 1,714 | 1,714 |
+| Form-language disagreements | 102 | 103 |
+| Form-language fallbacks | 129 (unmarked) | 102 (flagged) |
+| Changed comment language | — | 3 |
+
+Local text review covered the 102 previous disagreements, 129 previous
+fallbacks, and every changed route: 231 distinct review entries. Two previously
+missed Spanish responses now select Spanish. One clear Spanish comment scores
+below the required threshold and falls back to the form's English language;
+it is flagged for review. The threshold has not been tuned to these examples.
+
+Routing and PII results are assessed separately. Of the three rerouted comments,
+two have different redacted output: one unnecessary PERSON removal disappears,
+while the flagged Spanish fallback gains an unnecessary LOCATION removal under
+the English model. The third rerouted comment has identical output. All
+unchanged routes have identical detections and redactions. Overall changed
+comment and detection counts remain 76 and 83; those totals do not measure
+accuracy. The local review is an agent assessment, not an independently labeled
+gold standard. Model retraining and general PII-rule tuning remain separate work.
+
+Detailed comparisons, per-case review assessments, source hashes, and candidate
+stage files are Git-ignored under `private_data/language_fix_validation/` in the
+original checkout. Existing production outputs are not replaced by this check.
+
 ## Preservation and compatibility
 
 - Merged John’s commit `2e36b53` into `security-check` with Git ancestry preserved.
