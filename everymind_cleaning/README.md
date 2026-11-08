@@ -6,7 +6,7 @@ python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\act
 pip install -r requirements.txt
 mkdir data && cp /path/to/BuildFest_EveryMind_Survey_Data_FULL.xlsx data/
 jupyter notebook cleaning_pipeline.ipynb            # Run All
-python -m pytest checks -q                          # 10 real-export runs + 6 synthetic contract tests
+python -m pytest checks -q                          # 10 real-export runs + 242 synthetic contract/robustness tests
 ```
 
 ## Files
@@ -19,6 +19,7 @@ python -m pytest checks -q                          # 10 real-export runs + 6 sy
 | `privacy_adapter.py` | Stub that calls the team privacy tool. Connect it with `privacy_adapter.connect(redact)`. |
 | `pipeline_checks.py` | Generalization test runs (also used by `checks/test_cleaning.py`). |
 | `checks/test_release.py`, `checks/fixtures.py` | Synthetic round-trip and release-gate tests; no real data needed. |
+| `checks/test_robustness.py` | Generated matrix: every label × 18 formatting variants, typos, uncertain values, header drift, scores, Likert codes, dates, roles, IDs, drift, file formats. |
 | `cleaning_pipeline.ipynb` | One notebook: Part 1 cleaning walkthrough, Part 2 the Team 25 analysis on the cleaned data. |
 
 ## Outputs (one run = one `<run_key>`)
@@ -32,9 +33,15 @@ python -m pytest checks -q                          # 10 real-export runs + 6 sy
 
 **Blocking** (nothing is written): blank/duplicate IDs, duplicate or ambiguous headers, privacy checks, row alignment,
 value/status mismatch, out-of-range values. **Warning** (export allowed, affected analyses restricted): a required
-rating answered by fewer than 90% of rows (`min_valid_rate` in `schema.json`).
-Labels are applied only on exact/alias/approved matches; contains/fuzzy matches go to the review queue as suggestions.
-Dates must be ISO 8601 (`dates.format` in `schema.json`); anything else is marked invalid.
+rating answered by fewer than 90% of rows (`min_valid_rate`); more than 5% of a field's answers unrecognised
+(`max_unrecognised_rate`, catches format drift such as US dates or Spanish labels); an optional question missing while
+unrecognised headers are present (renamed question). IDs that collide after normalisation (`1`/`1.0`/`01`/case) block.
+Labels are applied only on exact/alias/approved matches, after ignoring case, spacing, Unicode width, accents,
+apostrophes and punctuation. Typos and contains/fuzzy matches go to the review queue as suggestions. Likert numeric
+codes are accepted only as whole numbers (`4`, `4.0`) or when number and label agree (`4 - Agree`); this assumes
+1 = Strongly disagree. Roles split on `;`, and on `,` / `|` only when every piece is a known role.
+Dates must be ISO 8601 (`dates.format` in `schema.json`); anything else is marked invalid. UTC offsets are dropped,
+keeping local wall-clock time. CSVs: UTF-8/UTF-16/cp1252, comma/semicolon/tab are detected.
 
 ## Read the export
 ```python

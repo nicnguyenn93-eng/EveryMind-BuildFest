@@ -136,11 +136,9 @@ def run_all(data_path, schema="schema.json", registry="mapping_registry.json") -
     d, rq = r.data, r.audit.review_table()
     queued = set(rq["raw_value"])
     checks = {
-        "county variant mapped": d.loc[1, "county"] == "Anne Arundel",
-        "county typos queued with suggestion, not applied":
-            d.loc[[0, 2], "county"].isna().all()
-            and rq.set_index("raw_value").loc[["Prince Georges Co.", "Mongomery"], "suggestion"].tolist()
-            == ["Prince George's", "Montgomery"],
+        "county variants mapped": list(d.loc[:1, "county"]) == ["Prince George's", "Anne Arundel"],
+        "county typo queued with suggestion, not applied":
+            pd.isna(d.loc[2, "county"]) and rq.set_index("raw_value").loc["Mongomery", "suggestion"] == "Montgomery",
         "unknown county queued": "Baltimore" in queued and d.loc[3, "county__status"] == ec.UNMAPPED,
         "case-variant Likert mapped": d.loc[4, "presenter_engaged"] == 5,
         "unknown Likert queued, not guessed": "Agreeeee" in queued and pd.isna(d.loc[5, "presenter_engaged"]),

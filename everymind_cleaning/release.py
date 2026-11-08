@@ -100,9 +100,7 @@ def standardize_input(df, cfg, audit):
     roles = df["role"].copy()
     out = ec.standardize(df, cfg, audit)
     pv = ec._prep_vocab(cfg["vocab"]["role"])
-    sep = "|".join(map(re.escape, cfg["vocab"]["role"].get("separators", [";"])))
-    unknown = roles.map(lambda v: any(ec.map_value(t.strip(), pv)[2] != ec.VALID
-                                    for t in re.split(sep, ec.clean_str(v)) if t.strip()))
+    unknown = roles.map(lambda v: bool(ec.split_multiselect(v, pv, cfg["vocab"]["role"])[2]))
     out["role__has_unmapped"] = unknown
     partial = unknown & out["role__n"].gt(0)
     out.loc[partial, "role__status"] = "partially_mapped"
@@ -212,14 +210,56 @@ def run_pipeline(source, schema_path, registry_path=None, filename=None):
 # ----------------------------------------------------------------------------------------
 # Release gate: blocking errors vs warnings
 # ----------------------------------------------------------------------------------------
+NOT_ANSWERED = {ec.SKIPPED, ec.DECLINED, ec.UNCLEAR_ASKED, "suspected_not_asked", "not_in_export"}
+UNRECOGNISED = {ec.INVALID, ec.UNMAPPED, "partially_mapped"}
+FORMULA_START = ("=", "+", "-", "@")
+
+
+def _id_key(ids):
+    """Collision key: '1', '1.0', '01', ' 1' and 'A1'/'a1' are the same respondent to a human."""
+    k = ids.astype("string").str.strip().str.casefold().str.replace(r"\.0+$", "", regex=True)
+    return k.str.lstrip("0").where(k.str.lstrip("0").ne(""), k)
+
+
+def _drift_checks(df, cfg, audit):
+    """Warnings for answers the cleaner could not read, and optional questions that vanished while
+    unrecognised headers are present: both usually mean the export format changed."""
+    rows, max_bad = [], cfg.get("max_unrecognised_rate", 0.05)
+    for c, spec in cfg["columns"].items():
+        st = df.get(c + "__status")
+        if st is None or spec["type"] in {"text", "id", "drop"}:
+            continue
+        answered = ~st.isin(NOT_ANSWERED)
+        bad = st.isin(UNRECOGNISED)
+        rate = bad.sum() / answered.sum() if answered.any() else 0.0
+        rows.append((f"{c}: unrecognised answers ≤ {max_bad:.0%}", rate <= max_bad, "warn",
+                     f"{int(bad.sum())}/{int(answered.sum())} ({rate:.0%}); see private mapping review" if rate > max_bad else ""))
+    match = next((st for st in audit.steps if st.get("step") == "Match columns"), {})
+    absent = [c for c in match.get("missing_optional", []) if cfg["columns"][c]["type"] != "drop"]
+    n_unmatched = len(match.get("unmatched_headers", []))
+    rows.append(("Optional questions present, or no unrecognised headers", not (absent and n_unmatched), "warn",
+                 f"absent: {absent}; {n_unmatched} unrecognised header(s); add synonyms if the wording changed"
+                 if absent and n_unmatched else ""))
+    return rows
+
+
 def release_checks(df, private, cfg, audit):
     checks = ec.validate(public_data(df), private, cfg, audit)
-    extra = [("Response IDs nonblank", df.response_id.notna().all() and df.response_id.astype("string").str.strip().ne("").all()),
-             ("Private rows aligned one-to-one", private.response_id.reset_index(drop=True).equals(df.response_id.reset_index(drop=True)))]
+    ids = df.response_id.astype("string")
+    key = _id_key(ids)
+    extra = [("At least one response", len(df) > 0, "block", ""),
+             ("Response IDs nonblank", df.response_id.notna().all() and ids.str.strip().ne("").all(), "block", ""),
+             ("Response IDs unambiguous ('1' vs '1.0'/'01'/case)",
+              key.duplicated(keep=False).sum() == ids.duplicated(keep=False).sum(), "block", ""),
+             ("Response IDs not formula-like", not ids.str.startswith(FORMULA_START).fillna(False).any(), "warn",
+              "IDs starting with = + - @ can execute when the CSV is opened in a spreadsheet"),
+             ("Private rows aligned one-to-one",
+              private.response_id.reset_index(drop=True).equals(df.response_id.reset_index(drop=True)), "block", "")]
     for c, spec in cfg["columns"].items():
         if spec["type"] in {"scale", "likert5"} and c in df:
-            extra.append((f"{c} value/status consistency", df[c].notna().eq(df[c + "__status"].eq(ec.VALID)).all()))
-    extra_df = pd.DataFrame([{"check": k, "pass": bool(v), "severity": "block", "detail": ""} for k, v in extra])
+            extra.append((f"{c} value/status consistency", df[c].notna().eq(df[c + "__status"].eq(ec.VALID)).all(), "block", ""))
+    extra += _drift_checks(df, cfg, audit)
+    extra_df = pd.DataFrame([{"check": k, "pass": bool(v), "severity": sev, "detail": d} for k, v, sev, d in extra])
     return pd.concat([checks, extra_df], ignore_index=True)
 
 

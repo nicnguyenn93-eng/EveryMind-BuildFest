@@ -289,6 +289,10 @@
       "separators": [
         ";"
       ],
+      "fallback_separators": [
+        ",",
+        "|"
+      ],
       "fuzzy_threshold": 88
     },
     "county": {
@@ -344,6 +348,7 @@
   },
   "agree_threshold": 4,
   "min_valid_rate": 0.9,
+  "max_unrecognised_rate": 0.05,
   "duplicates": {
     "exact": "drop",
     "duplicate_id": "flag",

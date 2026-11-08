@@ -81,8 +81,10 @@ def is_blank(x) -> bool:
 
 def match_key(x, strip_tokens: tuple = ()) -> str:
     """Aggressive key used only for matching (never stored): casefold, punctuation -> space."""
-    s = clean_str(x).casefold()
-    s = re.sub(r"[^\w\s]", " ", s)
+    s = unicodedata.normalize("NFKD", clean_str(x).casefold())
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))  # é -> e
+    s = s.replace("'", "")                                        # George's == Georges
+    s = re.sub(r"[^\w\s]|_", " ", s)
     if strip_tokens:
         s = " ".join(t for t in s.split() if t not in strip_tokens)
     return re.sub(r"\s+", " ", s).strip()
@@ -167,6 +169,7 @@ def load_config(schema_path, registry_path=None) -> dict:
 # ----------------------------------------------------------------------------------------
 # Step 1: ingest
 # ----------------------------------------------------------------------------------------
+_TZ_SUFFIX = re.compile(r"(\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?)\s*(?:Z|UTC|[+-]\d{2}:?\d{2})$", re.I)
 _READ_KW = dict(dtype=object, keep_default_na=False, na_values=[""])  # keep "N/A" as text
 
 
@@ -191,10 +194,16 @@ def ingest(source, cfg: dict, audit: Audit, filename: str | None = None) -> pd.D
         df = pd.read_excel(xls, sheet_name=sheet_used, **_READ_KW)
         header = pd.read_excel(xls, sheet_name=sheet_used, header=None, nrows=1, dtype=object).iloc[0]
     elif ext in {"csv", "tsv", "txt"}:
-        sep = "\t" if ext == "tsv" else ","
-        for encoding in ("utf-8-sig", "cp1252", "latin-1"):
+        if not data.strip():
+            raise SchemaError("The export is empty.")
+        encodings = ("utf-16",) if data[:2] in (b"\xff\xfe", b"\xfe\xff") else ("utf-8-sig", "cp1252", "latin-1")
+        seps = ["\t"] if ext == "tsv" else [",", ";", "\t"]  # ';' = European Excel; used only if ',' gives one column
+        for encoding in encodings:
             try:
-                df = pd.read_csv(io.BytesIO(data), encoding=encoding, sep=sep, **_READ_KW)
+                for sep in seps:
+                    df = pd.read_csv(io.BytesIO(data), encoding=encoding, sep=sep, **_READ_KW)
+                    if df.shape[1] > 1:
+                        break
                 header = pd.read_csv(io.BytesIO(data), encoding=encoding, sep=sep, header=None, nrows=1,
                                      dtype=object).iloc[0]
                 break
@@ -385,13 +394,16 @@ def parse_types(df: pd.DataFrame, cfg: dict, audit: Audit) -> pd.DataFrame:
         t = spec["type"]
         if t in ("datetime", "date"):
             raw = df[c]
-            parsed = pd.to_datetime(raw, errors="coerce", format=cfg.get("dates", {}).get("format", "ISO8601"))
+            # drop a trailing UTC offset (Z, +hh:mm) and keep the local wall-clock time, so mixed exports parse
+            local = raw.map(lambda v: _TZ_SUFFIX.sub(r"\1", v) if isinstance(v, str) else v)
+            parsed = pd.to_datetime(local, errors="coerce", format=cfg.get("dates", {}).get("format", "ISO8601"))
             if t == "date":
                 parsed = parsed.dt.normalize()
             bad = int((raw.notna() & parsed.isna()).sum())
             df[c] = parsed
             df[f"{c}__status"] = np.where(parsed.notna(), VALID, np.where(raw.notna(), INVALID, SKIPPED))
-            report[c] = {"blank": int(raw.isna().sum()), "unparseable": bad}
+            report[c] = {"blank": int(raw.isna().sum()), "unparseable": bad,
+                         "utc_offset_dropped": int((local != raw).fillna(False).sum())}
         elif t == "scale":
             raw = df[c]
             num = raw.map(lambda v: float(_LEADING_NUM.match(str(v)).group(1))
@@ -466,10 +478,18 @@ def map_value(raw: str, pv: dict):
     if k in pv["alias_keys"]:
         how = "approved" if match_key(raw) in pv["approved"] else "alias"
         return pv["alias_keys"][k], how, VALID
-    if pv["numeric"] and pv["codes"] and re.fullmatch(r"\d+", k):
+    if pv["numeric"] and pv["codes"]:
         inv = {v: l for l, v in pv["codes"].items()}
-        if int(k) in inv:
-            return inv[int(k)], "numeric code", VALID
+        s = clean_str(raw)
+        code = re.fullmatch(r"(\d+)(?:\.0+)?", s)
+        if code and int(code.group(1)) in inv:
+            return inv[int(code.group(1))], "numeric code", VALID
+        both = re.fullmatch(r"(\d+)\s*[-–:.)]\s*(.+)", s) or re.fullmatch(r"(.+?)\s*\((\d+)\)", s)
+        if both:
+            num, text = (both.group(1), both.group(2)) if both.group(1).isdigit() else (both.group(2), both.group(1))
+            lab = map_value(text, pv)
+            if lab[2] == VALID and lab[1] != "numeric code" and inv.get(int(num)) == lab[0]:
+                return lab[0], "code + label", VALID
     return None, None, UNMAPPED  # contains/fuzzy matches are suggestions only (see _suggest)
 
 
@@ -487,6 +507,27 @@ def _suggest(raw: str, pv: dict):
     if pv["fuzzy"] and best[0] >= pv["fuzzy"]:
         return best[1], round(best[0]), "fuzzy (needs review)"
     return best[1], round(best[0]), "fuzzy (weak; needs review)" if best[1] else None
+
+
+def split_multiselect(value, pv: dict, vocab: dict):
+    """-> (labels, methods, unknown_parts). Splits on the vocab separators; a part that does not map is retried
+    on `fallback_separators` (e.g. ',') and accepted only if every sub-part maps exactly or by alias."""
+    primary = "|".join(re.escape(s) for s in vocab.get("separators", [";"]))
+    fallback = "|".join(re.escape(s) for s in vocab.get("fallback_separators", []))
+    labels, methods, unknown = [], [], []
+    for part in (p.strip() for p in re.split(primary, clean_str(value))):
+        if not part:
+            continue
+        lab, how, st = map_value(part, pv)
+        if st == VALID:
+            labels.append(lab); methods.append(how); continue
+        subs = [p.strip() for p in re.split(fallback, part) if p.strip()] if fallback else []
+        mapped = [map_value(p, pv) for p in subs]
+        if len(subs) > 1 and all(m[2] == VALID for m in mapped):
+            labels += [m[0] for m in mapped]; methods += [f"{m[1]} (split on fallback separator)" for m in mapped]
+        else:
+            unknown.append(part)
+    return sorted(set(labels), key=pv["labels"].index), methods, unknown
 
 
 def standardize(df: pd.DataFrame, cfg: dict, audit: Audit,
@@ -510,26 +551,18 @@ def standardize(df: pd.DataFrame, cfg: dict, audit: Audit,
         raw = df[c]
 
         if spec["type"] == "multiselect":
-            seps = cfg["vocab"][vname].get("separators", [";"])
             slugs = cfg["vocab"][vname].get("slugs", {})
-            pattern = "|".join(re.escape(s) for s in seps)
             sets, statuses, unknown = [], [], {}
             for v in raw:
                 if is_blank(v):
                     sets.append([]); statuses.append(SKIPPED); continue
                 # always split first, so a multi-role answer can never be fuzzy-matched to a single role
-                parts = []
-                for part in (p.strip() for p in re.split(pattern, v)):
-                    if not part:
-                        continue
-                    lab, how, st_p = map_value(part, pv)
-                    if st_p == VALID:
-                        parts.append(lab)
-                        methods_report.setdefault(c, {}).setdefault(how, 0)
-                        methods_report[c][how] += 1
-                    else:
-                        unknown[part] = unknown.get(part, 0) + 1
-                parts = sorted(set(parts), key=pv["labels"].index)
+                parts, hows, unk = split_multiselect(v, pv, cfg["vocab"][vname])
+                for how in hows:
+                    methods_report.setdefault(c, {}).setdefault(how, 0)
+                    methods_report[c][how] += 1
+                for part in unk:
+                    unknown[part] = unknown.get(part, 0) + 1
                 sets.append(parts)
                 statuses.append(VALID if parts else UNMAPPED)
             df[f"{c}__set"] = pd.Series([";".join(p) if p else None for p in sets], index=df.index, dtype=object)
