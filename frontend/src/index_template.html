@@ -139,18 +139,18 @@ footer .wrap { display:grid; gap:var(--gap-sm); }
   .dumb .lane { grid-column:1/-1; }
 }
 
-/* ---------- intake gate ---------- */
+/* ---------- landing page ---------- */
 .intake { padding-block:var(--gap-xl); }
-.steps { list-style:none; margin:0; padding:0; display:grid; gap:var(--gap-md); counter-reset:step; }
-.step { background:var(--em-card); border:1px solid var(--em-line); border-radius:var(--radius);
-        padding:var(--pad-lg); display:grid; gap:var(--gap-sm);
-        grid-template-columns:auto minmax(0,1fr); align-items:start; }
-.step > .sn { width:2rem; height:2rem; border-radius:50%; background:var(--em-teal-soft);
-              color:var(--em-teal-ink); display:grid; place-items:center; font-weight:600; font-size:.95rem; }
-.step.done > .sn { background:var(--em-teal-deep); color:#fff; }
-.step > .sbody { display:grid; gap:var(--gap-sm); min-width:0; }
-.step h3 { font-size:1.05rem; }
-.step .hint { font-size:.85rem; color:var(--em-muted); max-width:72ch; }
+.purpose { margin-bottom:var(--gap-lg); }
+.purpose .card h3 { display:flex; gap:.5rem; align-items:baseline; }
+.purpose .card ul { margin:0; padding-left:1.1rem; display:grid; gap:.3rem; font-size:.9rem; }
+.uploadcard { display:grid; gap:var(--gap-md); }
+.uploadcard h3 { font-size:1.15rem; }
+.uploadcard .hint { font-size:.9rem; color:var(--em-body); max-width:74ch; }
+.types { display:flex; flex-wrap:wrap; gap:var(--gap-sm); }
+.type { border:1px solid var(--em-line); border-radius:var(--radius); padding:.5rem .8rem;
+        font-size:.82rem; display:grid; gap:.1rem; background:var(--em-panel); }
+.type b { color:var(--em-ink); font-size:.9rem; }
 
 .drop { border:2px dashed var(--em-line); border-radius:var(--radius); background:var(--em-panel);
         padding:var(--pad-lg); display:grid; gap:var(--gap-sm); justify-items:start; text-align:left; }
@@ -181,10 +181,40 @@ footer .wrap { display:grid; gap:var(--gap-sm); }
 .choice:has(input:checked) { border-color:var(--em-teal-deep); background:var(--em-teal-soft);
                              box-shadow:inset 0 0 0 1px var(--em-teal-deep); }
 .choice:has(input:disabled) { opacity:.5; cursor:not-allowed; }
-.gate { display:flex; flex-wrap:wrap; gap:var(--gap-md); align-items:center; margin-top:var(--gap-md); }
+.gate { display:flex; flex-wrap:wrap; gap:var(--gap-md); align-items:center; }
 .gate .btn { padding:.7rem 1.6rem; font-size:1rem; }
 .privacy { background:var(--em-teal-soft); border-radius:var(--radius); padding:var(--pad-md);
            font-size:.85rem; margin-top:var(--gap-md); }
+
+/* loading state */
+.loader { position:fixed; inset:0; z-index:50; display:grid; place-items:center;
+          background:rgba(255,255,255,.92); backdrop-filter:blur(2px); }
+.loader[hidden] { display:none; }   /* display:grid would otherwise beat the hidden attribute */
+.loadcard { display:grid; gap:var(--gap-md); justify-items:center; text-align:center;
+            padding:var(--pad-lg) var(--gap-xl); max-width:min(92vw,460px); }
+.spinner { width:48px; height:48px; border-radius:50%; border:4px solid var(--em-teal-soft);
+           border-top-color:var(--em-teal-deep); animation:spin 900ms linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.loadmsg { font-weight:600; color:var(--em-ink); font-size:1.05rem; }
+.loadbar { width:min(320px,70vw); height:6px; border-radius:999px; background:var(--em-grid); overflow:hidden; }
+.loadbar i { display:block; height:100%; width:0; background:var(--em-teal);
+             border-radius:999px; transition:width .45s ease; }
+.inline-spin { width:16px; height:16px; border-width:3px; display:inline-block; vertical-align:-3px;
+               margin-right:.45rem; }
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration:2.4s; } .loadbar i { transition:none; }
+}
+
+/* the report's own view control */
+.viewctl { display:flex; flex-wrap:wrap; gap:var(--gap-md); align-items:center; margin-bottom:var(--gap-md); }
+.viewctl .ctl { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; }
+.viewctl .lab { font-size:.75rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+                color:var(--em-muted); }
+.viewctl button { font:inherit; font-size:.82rem; font-weight:600; border:1px solid var(--em-line);
+                  background:var(--em-card); color:var(--em-ink); border-radius:999px;
+                  padding:.3rem .8rem; cursor:pointer; }
+.viewctl button[aria-pressed="true"] { background:var(--em-teal-deep); border-color:var(--em-teal-deep); color:#fff; }
+.viewctl button[disabled] { color:var(--em-chart-muted); cursor:not-allowed; background:var(--em-panel); }
 
 /* context bar shown once the report is built */
 .ctxbar { position:sticky; top:0; z-index:20; background:var(--em-teal-deep); color:#fff; }
@@ -222,59 +252,66 @@ footer .wrap { display:grid; gap:var(--gap-sm); }
   </div>
 </header>
 
-<!-- ============ STEP 0: the intake gate ============ -->
+<!-- ============ THE LANDING PAGE ============ -->
 <section class="intake" id="intake">
   <div class="wrap">
     <div class="secthead">
-      <p class="kicker">Before you start</p>
-      <h2>Set up this report</h2>
-      <p class="muted">Three answers decide what the report says. Your survey export is read in this
-        browser only — it is never uploaded anywhere, and nothing on this page talks to a server.</p>
+      <p class="kicker">What this is</p>
+      <h2>A reading of the post-training survey, built in your browser</h2>
+      <p class="muted">EveryMind runs Understanding 988 trainings across Maryland and asks everyone who
+        attends the same short survey. This tool turns those answers into the things a programme team can
+        act on: what the training moved, where it did not, and what to change next — with the evidence
+        under every claim and the interactive county map underneath. Load the export and it builds.</p>
     </div>
 
-    <ol class="steps">
-      <li class="step" id="step1">
-        <span class="sn">1</span>
-        <div class="sbody">
-          <h3>Load the survey export</h3>
-          <p class="hint">The original export from the survey tool, <code>.xlsx</code> or <code>.csv</code>.
-            It is checked here against the 20 columns the analysis pipeline expects, so you can see
-            straight away whether a new export will run.</p>
-          <div class="drop" id="drop">
-            <p><b>Drop the export here</b>, or</p>
-            <button class="btn ghost" type="button" id="pick">Choose a file</button>
-            <input type="file" id="file" accept=".csv,.xlsx" hidden>
-            <p class="cap muted">Nothing leaves this browser. Large workbooks take a moment to read.</p>
-          </div>
-          <div id="fileout"></div>
-          <button class="btn link" type="button" id="usedemo">No export to hand? Continue with the prepared dataset</button>
-        </div>
-      </li>
+    <div class="cards purpose">
+      <div class="card">
+        <h3>What it reads</h3>
+        <ul>
+          <li>The survey export exactly as the survey tool produces it — no manual tidying first.</li>
+          <li>Three before/after knowledge items, the presenter ratings, the recommend and call-988
+              scores, and the two open-text boxes.</li>
+          <li>Everything happens in this browser. Nothing is uploaded, and the page never contacts a server.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>What it checks</h3>
+        <ul>
+          <li>Whether the file is readable, how many responses it holds, and how many columns it has.</li>
+          <li>Whether all 20 columns the analysis pipeline expects are present, naming any that are missing.</li>
+          <li>A SHA-256 of the file, computed locally, so a run can be tied to an exact export.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>What you get</h3>
+        <ul>
+          <li>Headline figures for the whole survey, then six findings, each with its own chart.</li>
+          <li>Seven recommendations, each with its evidence, an owner, and the measure that would show
+              whether it worked.</li>
+          <li>The interactive Maryland map, to go county by county yourself.</li>
+        </ul>
+      </div>
+    </div>
 
-      <li class="step" id="step2">
-        <span class="sn">2</span>
-        <div class="sbody">
-          <h3>Who is this report about?</h3>
-          <p class="hint">The trainings reach two very different audiences, and almost every finding
-            splits along that line.</p>
-          <div class="choices" id="audience-choices"></div>
-        </div>
-      </li>
-
-      <li class="step" id="step3">
-        <span class="sn">3</span>
-        <div class="sbody">
-          <h3>Which jurisdiction?</h3>
-          <p class="hint">Only places with survey responses can be chosen. Groups under 10 responses are
-            never given a figure.</p>
-          <div class="choices" id="county-choices"></div>
-        </div>
-      </li>
-    </ol>
-
-    <div class="gate">
-      <button class="btn" id="build" type="button" disabled>Build the report</button>
-      <p class="cap muted" id="gatehint"></p>
+    <div class="card uploadcard">
+      <h3>Load the survey export</h3>
+      <p class="hint">Drop the file in, or choose it. Two formats are accepted:</p>
+      <div class="types">
+        <span class="type"><b>.xlsx</b>Excel workbook — the survey tool's own export, read as-is</span>
+        <span class="type"><b>.csv</b>Comma-separated, UTF-8, with the column names in the first row</span>
+      </div>
+      <div class="drop" id="drop">
+        <p><b>Drop the export here</b>, or</p>
+        <button class="btn ghost" type="button" id="pick">Choose a file</button>
+        <input type="file" id="file" accept=".csv,.xlsx" hidden>
+        <p class="cap muted">A large workbook takes a moment to read; you will see it working.</p>
+      </div>
+      <div id="fileout"></div>
+      <div class="gate">
+        <button class="btn" id="build" type="button" disabled>Generate the report</button>
+        <p class="cap muted" id="gatehint"></p>
+      </div>
+      <button class="btn link" type="button" id="usedemo">No export to hand? Use the prepared dataset instead</button>
     </div>
 
     <p class="privacy"><b>What happens to your file:</b> it is parsed in the page with the browser's own
@@ -285,13 +322,22 @@ footer .wrap { display:grid; gap:var(--gap-sm); }
   </div>
 </section>
 
+<div class="loader" id="loader" hidden>
+  <div class="loadcard">
+    <div class="spinner" role="progressbar" aria-labelledby="loadmsg"></div>
+    <p class="loadmsg" id="loadmsg">Working…</p>
+    <div class="loadbar"><i id="loadfill"></i></div>
+    <p class="cap muted" id="loadsub"></p>
+  </div>
+</div>
+
 <!-- ============ THE REPORT ============ -->
 <div id="report" hidden>
 
 <div class="ctxbar">
   <div class="wrap">
     <div class="pills" id="ctxpills"></div>
-    <button class="btn" type="button" id="change">Change selection</button>
+    <button class="btn" type="button" id="change">Load another export</button>
   </div>
 </div>
 
@@ -302,6 +348,7 @@ footer .wrap { display:grid; gap:var(--gap-sm); }
       <h2 id="glance-title">The analysis set</h2>
       <p class="muted" id="glance-note"></p>
     </div>
+    <div class="viewctl" id="viewctl"></div>
     <div class="tiles" id="tiles"></div>
   </div>
 </section>
@@ -658,60 +705,47 @@ async function inspectFile(file) {
 }
 
 /* ============================================================
-   5. The intake gate
+   5. The landing page: explain, take a file, then build
    ============================================================ */
 const fileOut = document.getElementById('fileout');
 const drop = document.getElementById('drop');
 const buildBtn = document.getElementById('build');
 const gateHint = document.getElementById('gatehint');
+const loader = document.getElementById('loader');
 
-function renderChoices() {
-  const ah = clear('audience-choices');
-  Object.entries(AUDIENCES).forEach(([key, a]) => {
-    const lab = el('label', 'choice');
-    const input = el('input');
-    input.type = 'radio'; input.name = 'audience'; input.value = key;
-    input.checked = SEL.audience === key;
-    input.addEventListener('change', () => { SEL.audience = key; renderChoices(); syncGate(); });
-    const st = stats(key, ALL);
-    lab.append(input, el('span', 't', a.label),
-      el('span', 'd', `${a.blurb} ${st ? n0(st.n) + ' responses statewide.' : 'No figures.'}`));
-    ah.append(lab);
-  });
-
-  const ch = clear('county-choices');
-  COUNTIES.forEach((c) => {
-    const st = SEL.audience ? stats(SEL.audience, c.key) : { n: c.n };
-    const lab = el('label', 'choice');
-    const input = el('input');
-    input.type = 'radio'; input.name = 'county'; input.value = c.key;
-    input.disabled = !SEL.audience || !st;
-    if (input.disabled && SEL.county === c.key) SEL.county = null;
-    input.checked = SEL.county === c.key;
-    input.addEventListener('change', () => { SEL.county = c.key; renderChoices(); syncGate(); });
-    let note;
-    if (!SEL.audience) note = 'Choose an audience first.';
-    else if (!st) note = `Fewer than 10 ${AUDIENCES[SEL.audience].short.toLowerCase()} here — no figures.`;
-    else note = `${n0(st.n)} responses${st.small ? ' · small sample' : ''}`;
-    lab.append(input, el('span', 't', c.label), el('span', 'd', note));
-    ch.append(lab);
-  });
-
-  document.getElementById('step2').classList.toggle('done', !!SEL.audience);
-  document.getElementById('step3').classList.toggle('done', !!SEL.county);
-}
+/* The report always opens on everything; the view can be narrowed afterwards,
+   from inside the report itself. */
+SEL.audience = 'all';
+SEL.county = ALL;
 
 function syncGate() {
-  const ready = SEL.source && SEL.audience && SEL.county;
-  buildBtn.disabled = !ready;
-  const want = [!SEL.source && 'load an export (or continue with the prepared dataset)',
-                !SEL.audience && 'choose an audience', !SEL.county && 'choose a jurisdiction']
-    .filter(Boolean);
-  gateHint.textContent = ready
-    ? `Ready: ${selLabel()}.`
-    : 'Still to do: ' + want.join(', ') + '.';
+  buildBtn.disabled = !SEL.source;
+  gateHint.textContent = SEL.source
+    ? `Ready to build from ${SEL.source}.`
+    : 'Load an export to continue, or use the prepared dataset.';
 }
 
+/* ---- the loading overlay ---------------------------------------------- */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+function loadStep(msg, sub, progress) {
+  document.getElementById('loadmsg').textContent = msg;
+  document.getElementById('loadsub').textContent = sub || '';
+  document.getElementById('loadfill').style.width = progress + '%';
+}
+async function withLoader(steps, work) {
+  loader.hidden = false;
+  document.getElementById('loadfill').style.width = '0';
+  let done = null;
+  for (let i = 0; i < steps.length; i++) {
+    loadStep(steps[i][0], steps[i][1], Math.round(((i + 1) / steps.length) * 100));
+    await sleep(steps[i][2] || 320);
+    if (work && !done) done = work();        // the real work runs behind the first tick
+  }
+  loader.hidden = true;
+  return done;
+}
+
+/* ---- step 1: read the reader's file ----------------------------------- */
 function showFile(info, error) {
   fileOut.replaceChildren();
   drop.classList.remove('ok', 'bad');
@@ -719,7 +753,8 @@ function showFile(info, error) {
   if (error) {
     drop.classList.add('bad');
     box.append(el('p', 'verdict err', 'Could not read this file'), el('p', 'cap muted', error));
-    box.append(el('p', 'cap muted', 'You can still continue with the prepared dataset below.'));
+    box.append(el('p', 'cap muted', 'Check that it is the survey tool\'s own .xlsx or .csv export. '
+      + 'You can also use the prepared dataset below.'));
     SEL.source = null;
   } else {
     const ok = info.missing.length === 0;
@@ -736,18 +771,24 @@ function showFile(info, error) {
     if (info.sha) add('SHA-256', info.sha + '… (computed here, not sent anywhere)');
     box.append(dl);
     box.append(el('p', 'cap muted',
-      'The report below is built from the pre-computed aggregate tables, not from this file. '
+      'The report is built from the pre-computed aggregate tables, not from this file. '
       + 'To analyse a new export, run the Python pipeline.'));
     SEL.source = `${info.name} (${n0(info.dataRows)} rows)`;
   }
   fileOut.append(box);
-  document.getElementById('step1').classList.toggle('done', !!SEL.source);
   syncGate();
 }
 
 async function handleFile(file) {
   if (!file) return;
-  fileOut.replaceChildren(el('p', 'cap muted', 'Reading ' + file.name + '…'));
+  const big = file.size > 400 * 1024;
+  fileOut.replaceChildren(el('p', 'cap muted',
+    '<span class="spinner inline-spin"></span>Reading ' + file.name + '…'
+    + (big ? ' This one is large, so give it a moment.' : '')));
+  drop.classList.remove('ok', 'bad');
+  SEL.source = null;
+  syncGate();
+  await sleep(60);                      // let the spinner paint before the parse blocks
   try { showFile(await inspectFile(file)); }
   catch (e) { showFile(null, String(e && e.message || e)); }
 }
@@ -765,7 +806,6 @@ document.getElementById('usedemo').addEventListener('click', () => {
   fileOut.replaceChildren(el('p', 'verdict ok', 'Using the prepared dataset'),
     el('p', 'cap muted', `The cleaned export behind this page: ${n0(H.responses_total)} responses from `
       + `${H.sessions} sessions, ${n0(H.responses_used)} of them in the analysis set.`));
-  document.getElementById('step1').classList.add('done');
   syncGate();
 });
 
@@ -773,17 +813,24 @@ document.getElementById('lede').innerHTML =
   `EveryMind surveyed <b>${n0(H.responses_total)}</b> people after its 988 trainings. `
   + `<b>${n0(H.responses_used)}</b> responses across <b>${H.sessions}</b> sessions survive cleaning, `
   + `and <b>${pct(H.pct_students)}</b> of them are students. `
-  + `Tell the page who the report is for, and it will build the findings and recommendations for that group.`;
+  + `Load the export below and the page builds the findings, the recommendations and the map.`;
 
-renderChoices();
 syncGate();
 
-buildBtn.addEventListener('click', () => {
-  renderReport();
-  document.getElementById('intake').hidden = true;
-  document.getElementById('report').hidden = false;
-  document.getElementById('topnav').hidden = false;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+buildBtn.addEventListener('click', async () => {
+  await withLoader([
+    ['Reading the export', SEL.source, 260],
+    ['Checking the columns against the pipeline schema', 'All 20 expected fields', 320],
+    ['Building the findings', 'Knowledge, satisfaction, intent, themes', 380],
+    ['Drawing the charts and the map', '', 300],
+  ], () => {
+    renderReport();
+    document.getElementById('intake').hidden = true;
+    document.getElementById('report').hidden = false;
+    document.getElementById('topnav').hidden = false;
+    window.scrollTo({ top: 0 });
+    return true;
+  });
 });
 document.getElementById('change').addEventListener('click', () => {
   document.getElementById('report').hidden = true;
@@ -810,6 +857,32 @@ function renderReport() {
     el('span', 'pill', A.label), el('span', 'pill', where),
     el('span', 'pill', n0(S.n) + ' responses' + (S.small ? ' · small sample' : '')),
     el('span', 'pill', SEL.source));
+
+  /* ---- the view control: narrow the report without going back to the start ---- */
+  const vc = clear('viewctl');
+  const group = (label, items, current, pick) => {
+    const g = el('div', 'ctl');
+    g.append(el('span', 'lab', label));
+    items.forEach((it) => {
+      const b = el('button', null, it.label);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(it.key === current));
+      if (it.disabled) { b.disabled = true; b.title = 'Fewer than 10 responses — no figures'; }
+      else b.addEventListener('click', () => pick(it.key));
+      g.append(b);
+    });
+    vc.append(g);
+  };
+  group('Showing', Object.entries(AUDIENCES).map(([key, a]) => ({
+    key, label: a.label, disabled: !stats(key, SEL.county),
+  })), SEL.audience, (key) => {
+    SEL.audience = key;
+    if (!stats(key, SEL.county)) SEL.county = ALL;
+    renderReport();
+  });
+  group('In', COUNTIES.map((c) => ({
+    key: c.key, label: c.label, disabled: !stats(SEL.audience, c.key),
+  })), SEL.county, (key) => { SEL.county = key; renderReport(); });
 
   /* ---- at a glance ---- */
   document.getElementById('glance-title').textContent = `${A.label} ${inWhere}`;
