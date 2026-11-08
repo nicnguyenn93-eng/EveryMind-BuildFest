@@ -313,8 +313,19 @@ function renderDeck() {
   dkShow(DK.i);
 }
 function dkShow(k) {
-  k = Math.max(0, Math.min(DK.cards.length - 1, k)); DK.i = k;
+  k = Math.max(0, Math.min(DK.cards.length - 1, k));
+  const old = DK.i; DK.i = k;
+  (DK.anims || []).forEach((an) => an.finish());           // a click mid-slide settles the last move first
   DK.nodes.forEach((n, j) => { n.hidden = j !== k; n.inert = j !== k; });
+  if (old !== k && DK.nodes[old] && !(typeof reduceMotion !== 'undefined' && reduceMotion.matches)) {
+    const dir = k > old ? 1 : -1, from = DK.nodes[old], to = DK.nodes[k], ms = 640, ease = 'cubic-bezier(.33,.85,.4,1)';
+    from.hidden = false; from.inert = true;                   // both cards share one grid cell while they cross
+    DK.anims = [
+      from.animate([{ transform: 'none', opacity: 1 }, { transform: `translateX(${-dir * 56}px)`, opacity: 0 }], { duration: ms * 0.7, easing: ease, fill: 'forwards' }),
+      to.animate([{ transform: `translateX(${dir * 56}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: ms, delay: 90, easing: ease, fill: 'backwards' }),
+    ];
+    const lead = DK.anims[0]; lead.onfinish = () => { lead.cancel(); if (from !== DK.nodes[DK.i]) from.hidden = true; };
+  }
   DK.cards.forEach((c, j) => { if (c.rec) { const on = PICKED.has(c.pick); DK.nodes[j].classList.toggle('on', on); DK.dots[j].classList.toggle('pk', on);
     const b = DK.nodes[j].querySelector('[data-pick]'); b.textContent = on ? '✓ Taking this forward' : '+ Take this action forward'; b.classList.toggle('pri', on); b.setAttribute('aria-pressed', on); } });
   DK.dots.forEach((d, j) => d.setAttribute('aria-current', j === k));
