@@ -343,6 +343,7 @@
     ]
   },
   "agree_threshold": 4,
+  "min_valid_rate": 0.9,
   "duplicates": {
     "exact": "drop",
     "duplicate_id": "flag",
@@ -359,6 +360,7 @@
     "skipped_min_rate": 0.5
   },
   "dates": {
+    "format": "ISO8601",
     "max_gap_days": 60
   },
   "quality": {

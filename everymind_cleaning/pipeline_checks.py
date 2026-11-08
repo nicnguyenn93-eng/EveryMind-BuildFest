@@ -122,7 +122,7 @@ def run_all(data_path, schema="schema.json", registry="mapping_registry.json") -
                            _col(messy, "recommend the Understanding"), _col(messy, "Are you a"), _col(messy, "Id"))
     messy.loc[0, cc] = "Prince Georges Co."
     messy.loc[1, cc] = "anne arundel county"
-    messy.loc[2, cc] = "Mongomery"              # typo -> fuzzy
+    messy.loc[2, cc] = "Mongomery"              # typo -> review queue with a fuzzy suggestion, not applied
     messy.loc[3, cc] = "Baltimore"              # unknown -> review queue
     messy.loc[4, lk] = "STRONGLY AGREE "
     messy.loc[5, lk] = "Agreeeee"               # unknown Likert -> review queue, never fuzzy
@@ -136,7 +136,11 @@ def run_all(data_path, schema="schema.json", registry="mapping_registry.json") -
     d, rq = r.data, r.audit.review_table()
     queued = set(rq["raw_value"])
     checks = {
-        "county typos mapped": list(d.loc[:2, "county"]) == ["Prince George's", "Anne Arundel", "Montgomery"],
+        "county variant mapped": d.loc[1, "county"] == "Anne Arundel",
+        "county typos queued with suggestion, not applied":
+            d.loc[[0, 2], "county"].isna().all()
+            and rq.set_index("raw_value").loc[["Prince Georges Co.", "Mongomery"], "suggestion"].tolist()
+            == ["Prince George's", "Montgomery"],
         "unknown county queued": "Baltimore" in queued and d.loc[3, "county__status"] == ec.UNMAPPED,
         "case-variant Likert mapped": d.loc[4, "presenter_engaged"] == 5,
         "unknown Likert queued, not guessed": "Agreeeee" in queued and pd.isna(d.loc[5, "presenter_engaged"]),

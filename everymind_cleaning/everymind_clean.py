@@ -8,7 +8,8 @@ Design rules
 ------------
 * Flag, never silently delete. Only exact duplicate rows and fully blank rows are removed.
 * Never impute an answer. Missing values carry a status code explaining why they are missing.
-* Every mapping is explainable: exact, alias, contains, fuzzy (with score) or human-approved.
+* Every mapping is explainable: exact, alias or human-approved. Contains/fuzzy matches are only
+  suggestions in the review queue; they are never applied automatically.
 * Unknown values are queued for human review, never guessed into a category.
 * Free text goes through the team privacy tool before it reaches public outputs or any LLM.
 * Everything is driven by schema.json + mapping_registry.json, so a new export with drifted
@@ -188,17 +189,25 @@ def ingest(source, cfg: dict, audit: Audit, filename: str | None = None) -> pd.D
         if want and want not in xls.sheet_names:
             audit.warn(f"Sheet '{want}' not found; used first sheet '{sheet_used}'.")
         df = pd.read_excel(xls, sheet_name=sheet_used, **_READ_KW)
+        header = pd.read_excel(xls, sheet_name=sheet_used, header=None, nrows=1, dtype=object).iloc[0]
     elif ext in {"csv", "tsv", "txt"}:
         sep = "\t" if ext == "tsv" else ","
         for encoding in ("utf-8-sig", "cp1252", "latin-1"):
             try:
                 df = pd.read_csv(io.BytesIO(data), encoding=encoding, sep=sep, **_READ_KW)
+                header = pd.read_csv(io.BytesIO(data), encoding=encoding, sep=sep, header=None, nrows=1,
+                                     dtype=object).iloc[0]
                 break
             except UnicodeDecodeError:
                 continue
     else:
         raise SchemaError(f"Unsupported file type '.{ext}'. Upload .xlsx or .csv.")
 
+    # pandas renames a repeated header to "X.1" before matching sees it, so check the raw header row
+    keys = [k for k in (match_key(h) for h in header) if k]
+    if len(keys) != len(set(keys)):
+        raise SchemaError(f"{len(keys) - len(set(keys))} duplicate column header(s) in the export; "
+                          "resolve them privately before cleaning.")
     n_raw = len(df)
     df = df.dropna(how="all").reset_index(drop=True)
     audit.log("Ingest",
@@ -376,7 +385,7 @@ def parse_types(df: pd.DataFrame, cfg: dict, audit: Audit) -> pd.DataFrame:
         t = spec["type"]
         if t in ("datetime", "date"):
             raw = df[c]
-            parsed = pd.to_datetime(raw, errors="coerce", format="mixed")
+            parsed = pd.to_datetime(raw, errors="coerce", format=cfg.get("dates", {}).get("format", "ISO8601"))
             if t == "date":
                 parsed = parsed.dt.normalize()
             bad = int((raw.notna() & parsed.isna()).sum())
@@ -461,24 +470,23 @@ def map_value(raw: str, pv: dict):
         inv = {v: l for l, v in pv["codes"].items()}
         if int(k) in inv:
             return inv[int(k)], "numeric code", VALID
-    if pv["contains"]:
-        hits = {lab for ck, lab in pv["canon_keys"].items() if ck and re.search(rf"\b{re.escape(ck)}\b", k)}
-        if len(hits) == 1:
-            return hits.pop(), "contains", VALID
-    if pv["fuzzy"] and fuzz is not None:
-        best = max(((fuzz.token_sort_ratio(k, ck), lab) for ck, lab in {**pv["canon_keys"], **pv["alias_keys"]}.items()),
-                   default=(0, None))
-        if best[0] >= pv["fuzzy"]:
-            return best[1], f"fuzzy ({best[0]:.0f})", VALID
-    return None, None, UNMAPPED
+    return None, None, UNMAPPED  # contains/fuzzy matches are suggestions only (see _suggest)
 
 
 def _suggest(raw: str, pv: dict):
-    if fuzz is None:
-        return None, None
+    """Return (label, score, method) for the review queue; never applied automatically."""
     k = match_key(raw, pv["strip"])
-    best = max(((fuzz.token_sort_ratio(k, ck), lab) for ck, lab in pv["canon_keys"].items()), default=(0, None))
-    return best[1], round(best[0])
+    if pv["contains"]:
+        hits = {lab for ck, lab in pv["canon_keys"].items() if ck and re.search(rf"\b{re.escape(ck)}\b", k)}
+        if len(hits) == 1:
+            return hits.pop(), None, "contains (needs review)"
+    if fuzz is None:
+        return None, None, None
+    best = max(((fuzz.token_sort_ratio(k, ck), lab) for ck, lab in {**pv["canon_keys"], **pv["alias_keys"]}.items()),
+               default=(0, None))
+    if pv["fuzzy"] and best[0] >= pv["fuzzy"]:
+        return best[1], round(best[0]), "fuzzy (needs review)"
+    return best[1], round(best[0]), "fuzzy (weak; needs review)" if best[1] else None
 
 
 def standardize(df: pd.DataFrame, cfg: dict, audit: Audit,
@@ -558,8 +566,7 @@ def standardize(df: pd.DataFrame, cfg: dict, audit: Audit,
                 if rv in llm:
                     sug, score, by = llm[rv], None, "llm"
                 else:
-                    sug, score = _suggest(rv, pv)
-                    by = "fuzzy (below auto-accept threshold)" if sug else None
+                    sug, score, by = _suggest(rv, pv)
                 audit.queue(vocab=vname, column=c, raw_value=rv, count=int(n),
                             suggestion=sug, suggestion_score=score, suggested_by=by)
 
@@ -789,9 +796,10 @@ def derive_fields(df: pd.DataFrame, cfg: dict, audit: Audit) -> pd.DataFrame:
 # ----------------------------------------------------------------------------------------
 def validate(df: pd.DataFrame, private: pd.DataFrame, cfg: dict, audit: Audit) -> pd.DataFrame:
     rows = []
+    min_rate = cfg.get("min_valid_rate", 0.9)  # low answer rates warn and restrict analyses; they never block
 
-    def chk(name, ok, detail=""):
-        rows.append({"check": name, "pass": bool(ok), "detail": detail})
+    def chk(name, ok, detail="", severity="block"):
+        rows.append({"check": name, "pass": bool(ok), "severity": severity, "detail": detail})
 
     text_cols = [c for c, s in cfg["columns"].items() if s["type"] == "text"]
     chk("No raw comment columns in public output", not any(c in df.columns for c in text_cols))
@@ -807,15 +815,17 @@ def validate(df: pd.DataFrame, private: pd.DataFrame, cfg: dict, audit: Audit) -
             chk(f"{c} within 1–5", v.between(1, 5).all())
             if s.get("required"):
                 rate = (df[f"{c}__status"] == VALID).mean()
-                chk(f"{c} valid rate ≥ 90%", rate >= 0.9, f"{rate:.1%}")
+                chk(f"{c} valid rate ≥ {min_rate:.0%}", rate >= min_rate, f"{rate:.1%}", severity="warn")
     canaries = cfg["text"].get("privacy_canaries", [])
     if canaries and privacy_adapter.is_connected():
         red = df[[c for c in df.columns if c.endswith("__redacted")]].astype(str).agg(" ".join, axis=1).str.casefold()
         leaked = [cn for cn in canaries if red.str.contains(re.escape(cn.casefold())).any()]
         chk("Privacy canaries absent from redacted text", not leaked, f"leaked: {leaked}" if leaked else "")
     out = pd.DataFrame(rows)
+    failed = out.loc[~out["pass"]]
     audit.log("Validate", f"{int(out['pass'].sum())}/{len(out)} checks passed.",
-              failed=out.loc[~out["pass"], "check"].tolist())
+              blocking=failed.loc[failed.severity.eq("block"), "check"].tolist(),
+              warnings=failed.loc[failed.severity.eq("warn"), "check"].tolist())
     return out
 
 
@@ -868,6 +878,7 @@ class Result:
 
 def run_pipeline(source, schema_path, registry_path=None, filename=None,
                  suggest_fn=None, translate_fn=None) -> Result:
+    """Core steps only, with no release gate. For a shareable export use release.run_pipeline."""
     cfg = load_config(schema_path, registry_path)
     audit = Audit()
     df = ingest(source, cfg, audit, filename=filename)
