@@ -1,0 +1,22 @@
+{
+  "actions": [
+    {
+      "action_id": "ACT_PILOT_ROLEPLAY",
+      "trigger_metric": "retrospective_agreement",
+      "threshold_condition": "less_than",
+      "threshold_value": 90.0,
+      "proposed_action": "Launch a 988 Scenario Roleplay Pilot",
+      "staff_owner": "Training Lead",
+      "follow_up_measure": "Proportion of students successfully resolving the interactive roleplay scenario in the next cohort."
+    },
+    {
+      "action_id": "ACT_RETAIN_ENGAGE",
+      "trigger_metric": "recommendation_score",
+      "threshold_condition": "less_than",
+      "threshold_value": 8.0,
+      "proposed_action": "Revise the Student Training Engagement Module",
+      "staff_owner": "Curriculum Designer",
+      "follow_up_measure": "Net Promoter Score (NPS) improvement in the subsequent batch."
+    }
+  ]
+}
