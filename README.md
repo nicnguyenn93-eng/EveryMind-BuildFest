@@ -1,8 +1,10 @@
 # EveryMind local survey preparation
 
-Convert the original Excel survey into a verified CSV. This repository currently
-contains an Excel converter and a local Presidio baseline for reviewing possible
-identifiers in written responses. Neither script calls an LLM.
+John's `everymind_cleaning` package is the primary pipeline. It reads Excel or
+CSV directly, cleans the structured survey data, and calls the existing local
+Presidio engine through its privacy adapter. The standalone Excel converter and
+full-CSV Presidio baseline remain available for comparison. No LLM is called by
+the integrated command.
 
 ## Setup
 
@@ -30,6 +32,53 @@ The baseline uses `presidio-analyzer==2.2.366`, `presidio-anonymizer==2.2.366`,
 `spacy==3.8.11`, and `tldextract==5.4.0`. It runs both language models on the CPU.
 The redaction script checks both model versions before processing and fails
 with a setup instruction if either is absent or has the wrong version.
+
+## Primary workflow: John's cleaner with Presidio
+
+Place the original workbook in `private_data/`, then run from the repository root:
+
+```bash
+python -m everymind_cleaning.run_pipeline
+```
+
+This uses John's Excel reader directly; an intermediate CSV is optional:
+
+```bash
+python -m everymind_cleaning.run_pipeline --input private_data/survey.csv --output-dir private_data/cleaning
+```
+
+Results are grouped by the source-file hash prefix under
+`private_data/cleaning/<dataset-key>/outputs/` and `private/`. They include John's
+cleaned CSV, cleaning audit, label-mapping review, private comments, and distress
+review, plus a detailed Presidio review CSV and a text-free summary JSON.
+The supplied survey yields 1,299 records and 75 cleaned/derived columns.
+
+John's original values and mapping/quality rules are preserved. His existing
+heuristic selects English or Spanish **per comment**, with form-language fallback;
+the Presidio models and detection rules are unchanged. Missing/unsupported
+languages on nonblank comments stop the run; blanks bypass detection. This
+heuristic is not a complete solution for mixed-language responses.
+
+The private redaction review includes source row, original ID, source language,
+form language, selected language, verbatim source text, normalized engine input,
+redacted text, and detection types/offsets/scores. Offsets refer to
+`normalized_input`, not the verbatim source. John's normalized comment columns
+remain available in the private file for his existing local keyword analysis;
+the additional `__original` columns retain source text. Source-row tracking does
+not participate in duplicate matching and is excluded from the cleaned table.
+
+All validation checks must pass before publication. Outputs are staged and CSV/JSON
+contents verified before replacement; ordinary replacement errors roll back files
+already replaced. Abrupt OS/process termination during multi-file publication can
+still interrupt it. Existing standalone baseline outputs are not overwritten.
+
+`redacted` means processed, **not verified anonymous**. The cleaned table retains
+response IDs, dates, and geography, and Presidio can miss identifiers. All files
+are local review outputs. Translation and LLM suggestion hooks stay disabled in
+the command and notebook workflow.
+
+See [everymind_cleaning/README.md](everymind_cleaning/README.md) for the notebook
+and dependency options.
 
 ## Convert the survey
 
@@ -133,12 +182,25 @@ decision about LLM input are still needed before sending data to an LLM.
 python -m unittest discover -s tests -v
 ```
 
+Install the development dependencies and run John's ten original cleaning checks:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest everymind_cleaning/checks -q
+```
+
+Set `EVERYMIND_DATA` to test another workbook. These checks temporarily isolate
+the privacy adapter and restore its previous connection; they do not repeatedly
+run the large models. The normal integration tests use fictional data and a fake
+redactor, including normalization, provenance, duplicate IDs, and output rollback.
+
 Tests use temporary synthetic workbooks and do not require the real survey.
 The Presidio pipeline tests use a deterministic fake engine so model downloads
 are unnecessary. After installing the models, also run the opt-in model check:
 
 ```bash
 RUN_PRESIDIO_INTEGRATION=1 python -m unittest discover -s tests -p test_presidio_models.py -v
+RUN_PRESIDIO_INTEGRATION=1 python -m unittest discover -s tests -p test_cleaning_integration.py -v
 ```
 
 This exercises fictional English and Spanish names, emails, phone numbers,

@@ -1,0 +1,7 @@
+# Optional: John's notebook and analysis sections.
+-r ../requirements.txt
+jupyter
+matplotlib>=3.9
+scipy>=1.13
+statsmodels>=0.14
+scikit-learn>=1.5

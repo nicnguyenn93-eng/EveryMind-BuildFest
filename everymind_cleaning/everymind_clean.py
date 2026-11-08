@@ -20,7 +20,10 @@ import hashlib
 import io
 import json
 import re
+import csv
+import tempfile
 import unicodedata
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
@@ -33,7 +36,17 @@ try:
 except ImportError:  # fuzzy tier is optional; exact / alias / contains still work
     fuzz = None
 
-import privacy_adapter
+if __package__:
+    from . import privacy_adapter
+else:  # Retain John's direct-module import convention for existing consumers.
+    import privacy_adapter
+
+SOURCE_ROW = "__source_row"
+PRIVACY_REVIEW_COLUMNS = [
+    "source_row", "original_id", "response_id", "field", "source_field",
+    "source_language", "form_language", "language", "original_text",
+    "normalized_input", "redacted_text", "normalization_changed", "status", "detections",
+]
 
 # ----------------------------------------------------------------------------------------
 # Status codes: why a value is (or is not) usable
@@ -103,6 +116,7 @@ class Audit:
     review_queue: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
     disabled: list = field(default_factory=list)
+    privacy_tool: str = "not connected"
 
     def log(self, step: str, summary: str, **details):
         self.steps.append({"step": step, "summary": summary, **details})
@@ -120,7 +134,7 @@ class Audit:
     def to_markdown(self) -> str:
         out = ["# Cleaning audit report", "",
                f"- Source: `{self.source_name}`", f"- Dataset key (SHA-256 prefix): `{self.dataset_key}`",
-               f"- Privacy tool: {privacy_adapter.tool_name()}", ""]
+               f"- Privacy tool: {self.privacy_tool}", ""]
         for i, s in enumerate(self.steps, 1):
             out += [f"## {i}. {s['step']}", "", s["summary"], ""]
             for k, v in s.items():
@@ -192,7 +206,7 @@ def ingest(source, cfg: dict, audit: Audit, filename: str | None = None) -> pd.D
         sep = "\t" if ext == "tsv" else ","
         for encoding in ("utf-8-sig", "cp1252", "latin-1"):
             try:
-                df = pd.read_csv(io.BytesIO(data), encoding=encoding, sep=sep, **_READ_KW)
+                df = pd.read_csv(io.BytesIO(data), encoding=encoding, sep=sep, skip_blank_lines=False, **_READ_KW)
                 break
             except UnicodeDecodeError:
                 continue
@@ -200,10 +214,14 @@ def ingest(source, cfg: dict, audit: Audit, filename: str | None = None) -> pd.D
         raise SchemaError(f"Unsupported file type '.{ext}'. Upload .xlsx or .csv.")
 
     n_raw = len(df)
+    kept = df.index[~df.isna().all(axis=1)].tolist()
+    kept_set = set(kept)
+    blank_rows = [int(i) + 2 for i in df.index if i not in kept_set]
     df = df.dropna(how="all").reset_index(drop=True)
+    df.attrs["source_rows"] = [int(i) + 2 for i in kept]
     audit.log("Ingest",
               f"Read `{name}`: {n_raw} rows × {df.shape[1]} columns; removed {n_raw - len(df)} fully blank rows.",
-              sheet=sheet_used, encoding=encoding)
+              sheet=sheet_used, encoding=encoding, removed_source_rows=blank_rows)
     return df
 
 
@@ -285,6 +303,15 @@ def match_columns(df: pd.DataFrame, cfg: dict, audit: Audit, fuzzy_threshold: in
               methods={c: method[c] for c in assigned},
               missing_optional=missing_opt, unmatched_headers=unmatched)
     out.attrs["column_methods"] = {c: (assigned[c], method[c]) for c in assigned}
+    source_rows = df.attrs.get("source_rows", list(range(2, len(df) + 2)))
+    out[SOURCE_ROW] = source_rows
+    originals = {}
+    for position, source_row in enumerate(source_rows):
+        originals[source_row] = {
+            c: "" if is_blank(out.iloc[position][c]) else str(out.iloc[position][c])
+            for c in assigned if c in ("response_id", "form_language") or specs[c]["type"] == "text"
+        }
+    out.attrs["source_originals"] = originals
     return out
 
 
@@ -303,6 +330,8 @@ def normalize_values(df: pd.DataFrame, cfg: dict, audit: Audit) -> pd.DataFrame:
     df = df.copy()
     changed = {}
     for c in df.columns:
+        if c == SOURCE_ROW:
+            continue
         before = df[c]
         after = before.map(clean_str)
         after = after.where(after != "", None)
@@ -323,10 +352,11 @@ def normalize_values(df: pd.DataFrame, cfg: dict, audit: Audit) -> pd.DataFrame:
 # ----------------------------------------------------------------------------------------
 def deduplicate(df: pd.DataFrame, cfg: dict, audit: Audit) -> pd.DataFrame:
     n0 = len(df)
-    exact = df.duplicated(keep="first")
+    exact = df.duplicated(subset=[c for c in df.columns if c != SOURCE_ROW], keep="first")
+    removed_rows = df.loc[exact, SOURCE_ROW].tolist() if SOURCE_ROW in df else []
     df = df[~exact].reset_index(drop=True)
 
-    content = [c for c in df.columns if c != "response_id"]
+    content = [c for c in df.columns if c not in ("response_id", SOURCE_ROW)]
     has_ts = any(c in df.columns for c in ("start_time", "completion_time"))
     # same answers AND same timestamps under a different ID = likely double export.
     # Without timestamps, identical answers are common (e.g. a class all ticking 'Agree'), so don't flag.
@@ -336,7 +366,7 @@ def deduplicate(df: pd.DataFrame, cfg: dict, audit: Audit) -> pd.DataFrame:
               f"Removed {int(exact.sum())} exact duplicate row(s) ({n0} → {len(df)}). "
               f"Flagged {int(df.flag_duplicate_id.sum())} rows sharing an ID and "
               f"{int(df.flag_possible_duplicate.sum())} rows with identical answers and timestamps under different IDs "
-              "for operator review (kept).")
+              "for operator review (kept).", removed_source_rows=removed_rows)
     if df.flag_duplicate_id.any():
         audit.warn("Duplicate response IDs found. Resolve before replacing the active dataset.")
     return df
@@ -664,6 +694,10 @@ def process_text(df: pd.DataFrame, cfg: dict, audit: Audit,
     receives text that the privacy tool has already redacted.
     """
     df = df.copy()
+    originals = df.attrs.pop("source_originals", {})
+    source_rows = df[SOURCE_ROW].tolist() if SOURCE_ROW in df else list(range(2, len(df) + 2))
+    df = df.drop(columns=SOURCE_ROW, errors="ignore")
+    df.attrs.pop("source_rows", None)
     t = cfg["text"]
     unclear = {match_key(x) for x in t["unclear_phrases"]} | {""}
     none_ = {match_key(x) for x in t["none_phrases"]}
@@ -671,8 +705,13 @@ def process_text(df: pd.DataFrame, cfg: dict, audit: Audit,
     distress_re = re.compile(r"\b(" + "|".join(re.escape(match_key(x)) for x in t["distress_terms"]) + r")\b")
     text_cols = [c for c, s in cfg["columns"].items() if s["type"] == "text" and c in df.columns]
     private = pd.DataFrame({"response_id": df["response_id"]})
+    private["source_row"] = source_rows
+    private["original_id"] = [originals.get(row, {}).get("response_id", str(identifier))
+                              for row, identifier in zip(source_rows, df["response_id"])]
     connected = privacy_adapter.is_connected()
+    audit.privacy_tool = privacy_adapter.tool_name()
     report = {}
+    review = []
 
     form_lang = df["form_language"] if "form_language" in df.columns else pd.Series(["unknown"] * len(df), index=df.index)
     form_lang = form_lang.map({"English": "en", "Spanish": "es", "en": "en", "es": "es"}).fillna("unknown")
@@ -687,15 +726,36 @@ def process_text(df: pd.DataFrame, cfg: dict, audit: Audit,
         df[f"{c}__has_question_mark"] = raw.str.contains(r"\?", regex=True) & cat.eq("substantive")
         df[f"{c}__chars"] = raw.str.len()
         private[c] = raw.where(raw != "", None)
+        verbatim = [originals.get(row, {}).get(c, text) for row, text in zip(source_rows, raw)]
+        private[f"{c}__original"] = verbatim
         private[f"{c}__distress_flag"] = distress
 
         red = privacy_adapter.redact_texts(raw.tolist(), lang.tolist())
+        details = privacy_adapter.review_details() if red is not None else None
+        if details is not None and len(details) != len(raw):
+            raise ValueError("Privacy review details must align with the comment batch")
         if red is None:
             df[f"{c}__redacted"] = None
             df[f"{c}__privacy"] = np.where(raw != "", "pending", "blank")
         else:
             df[f"{c}__redacted"] = pd.Series(red, index=df.index).where(raw != "", None)
             df[f"{c}__privacy"] = np.where(raw != "", "redacted", "blank")
+
+        for position, (source_row, text, language) in enumerate(zip(source_rows, raw, lang)):
+            replacement = red[position] if red is not None else ""
+            status = ("blank" if not text.strip() else "pending" if red is None
+                      else "changed" if replacement != text else "unchanged")
+            review.append({
+                "source_row": source_row, "original_id": private["original_id"].iloc[position],
+                "response_id": str(df["response_id"].iloc[position]), "field": c,
+                "source_field": df.attrs.get("column_methods", {}).get(c, (c,))[0],
+                "source_language": originals.get(source_row, {}).get("form_language", ""),
+                "form_language": form_lang.iloc[position], "language": language,
+                "original_text": verbatim[position], "normalized_input": text,
+                "redacted_text": replacement, "normalization_changed": verbatim[position] != text,
+                "status": status,
+                "detections": json.dumps(details[position]["detections"] if details is not None else [], ensure_ascii=False),
+            })
 
         if translate_fn is not None:
             if not connected:
@@ -716,7 +776,38 @@ def process_text(df: pd.DataFrame, cfg: dict, audit: Audit,
               f"{'connected (' + privacy_adapter.tool_name() + ')' if connected else 'NOT connected; redacted columns left pending'}. "
               "Raw comments and distress flags are written only to the private folder.",
               details=report)
+    private.attrs["privacy_review"] = review
+    private.attrs["privacy_summary"] = summarize_privacy(review, privacy_adapter.versions(), connected)
     return df, private
+
+
+def summarize_privacy(review, versions, connected):
+    statuses, entities = Counter(), Counter()
+    languages = {}
+    mismatches = 0
+    for record in review:
+        status, language = record["status"], record["language"]
+        statuses[status] += 1
+        counts = languages.setdefault(language, {"comments": 0, "changed": 0, "unchanged": 0,
+                                                "blank": 0, "pending": 0, "detections": Counter()})
+        counts["comments"] += 1
+        counts[status] += 1
+        if status != "blank" and record["form_language"] in ("en", "es") and language != record["form_language"]:
+            mismatches += 1
+        for detection in json.loads(record["detections"]):
+            entities[detection["entity_type"]] += 1
+            counts["detections"][detection["entity_type"]] += 1
+    return {
+        "comments": len(review), "scanned": statuses["changed"] + statuses["unchanged"],
+        **{status: statuses[status] for status in ("changed", "unchanged", "blank", "pending")},
+        "normalization_changed": sum(record["normalization_changed"] for record in review),
+        "form_language_disagreements": mismatches,
+        "detections_by_entity_type": dict(sorted(entities.items())), "by_language": languages,
+        "versions": versions, "tool_connected": connected,
+        "routing": "John's existing per-comment detect_language with form-language fallback",
+        "offset_basis": "normalized_input; zero-based Python characters, exclusive end",
+        "review_required": True,
+    }
 
 
 # ----------------------------------------------------------------------------------------
@@ -864,6 +955,18 @@ class Result:
     private: pd.DataFrame
     audit: Audit
     checks: pd.DataFrame
+    privacy_review: pd.DataFrame = field(default_factory=pd.DataFrame)
+    privacy_summary: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        review = self.private.attrs.pop("privacy_review", [])
+        summary = self.private.attrs.pop("privacy_summary", {})
+        if self.privacy_review.empty:
+            self.privacy_review = pd.DataFrame(review, columns=PRIVACY_REVIEW_COLUMNS)
+        if not self.privacy_summary:
+            self.privacy_summary = summary
+        if self.privacy_summary:
+            self.privacy_summary.update(data_rows=len(self.data), columns=len(self.data.columns))
 
 
 def run_pipeline(source, schema_path, registry_path=None, filename=None,
@@ -886,6 +989,14 @@ def run_pipeline(source, schema_path, registry_path=None, filename=None,
 
 
 def write_outputs(result: Result, out_dir, private_dir) -> dict:
+    """Stage and verify all outputs before replacing any existing result files."""
+    if __package__:
+        from .output_utils import finalize_outputs
+    else:
+        from output_utils import finalize_outputs
+
+    if not result.checks["pass"].all():
+        raise ValueError("Validation failed; no results published. Inspect Result.checks locally.")
     out_dir, private_dir = Path(out_dir), Path(private_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     private_dir.mkdir(parents=True, exist_ok=True)
@@ -897,10 +1008,29 @@ def write_outputs(result: Result, out_dir, private_dir) -> dict:
         "private_comments": private_dir / f"comments_private_{key}.csv",
         "distress_review": private_dir / f"distress_review_{key}.csv",
     }
-    result.data.to_csv(paths["cleaned"], index=False)
-    paths["audit"].write_text(result.audit.to_markdown(), encoding="utf-8")
-    result.audit.review_table().to_csv(paths["review"], index=False)
-    result.private.to_csv(paths["private_comments"], index=False)
     flags = [c for c in result.private.columns if c.endswith("__distress_flag")]
-    result.private[result.private[flags].any(axis=1)].to_csv(paths["distress_review"], index=False)
+    tables = {
+        "cleaned": result.data, "review": result.audit.review_table(),
+        "private_comments": result.private,
+        "distress_review": result.private[result.private[flags].any(axis=1)],
+    }
+    if result.privacy_summary:
+        paths["privacy_review"] = private_dir / f"presidio_review_{key}.csv"
+        paths["privacy_summary"] = out_dir / f"presidio_summary_{key}.json"
+        tables["privacy_review"] = result.privacy_review
+    with tempfile.TemporaryDirectory(prefix=".cleaning-", dir=out_dir) as directory:
+        staged = {name: Path(directory) / destination.name for name, destination in paths.items()}
+        for name, table in tables.items():
+            payload = table.to_csv(index=False)
+            staged[name].write_text(payload, encoding="utf-8", newline="")
+            with staged[name].open(encoding="utf-8", newline="") as handle:
+                if list(csv.reader(handle, strict=True)) != list(csv.reader(io.StringIO(payload, newline=""), strict=True)):
+                    raise ValueError("Temporary CSV verification failed; no results published.")
+        staged["audit"].write_text(result.audit.to_markdown(), encoding="utf-8")
+        if "privacy_summary" in staged:
+            payload = json.dumps(result.privacy_summary, ensure_ascii=False, indent=2) + "\n"
+            staged["privacy_summary"].write_text(payload, encoding="utf-8")
+            if json.loads(staged["privacy_summary"].read_text()) != result.privacy_summary:
+                raise ValueError("Temporary summary verification failed; no results published.")
+        finalize_outputs([(staged[name], destination) for name, destination in paths.items()])
     return paths

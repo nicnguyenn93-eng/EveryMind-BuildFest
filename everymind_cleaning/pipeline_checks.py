@@ -13,8 +13,13 @@ import warnings
 
 import pandas as pd
 
-import everymind_clean as ec
-import privacy_adapter
+if __package__:
+    from . import everymind_clean as ec, privacy_adapter
+else:
+    import everymind_clean as ec
+    import privacy_adapter
+
+from pathlib import Path
 
 warnings.simplefilter("ignore")
 
@@ -51,7 +56,16 @@ def _run(data: bytes, name: str, schema, registry):
     return ec.run_pipeline(data, schema, registry, filename=name)
 
 
-def run_all(data_path, schema="schema.json", registry="mapping_registry.json") -> pd.DataFrame:
+def run_all(data_path, schema=None, registry=None) -> pd.DataFrame:
+    """Run cleaning checks without consuming or disconnecting a real redactor."""
+    root = Path(__file__).resolve().parent
+    schema = schema or root / "schema.json"
+    registry = registry or root / "mapping_registry.json"
+    with privacy_adapter.using():
+        return _run_all(data_path, schema, registry)
+
+
+def _run_all(data_path, schema, registry) -> pd.DataFrame:
     cfg = ec.load_config(schema, registry)
     raw = _raw(data_path)
     base = ec.run_pipeline(data_path, schema, registry)
