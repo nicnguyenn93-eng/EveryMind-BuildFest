@@ -76,7 +76,7 @@ def test_typos_never_map_to_another_label(vocab, raw, target):
 MUST_REVIEW = {  # plausible inputs whose meaning is not certain: never auto-applied
     "likert5": ["-1", "1.", "(4)", "0", "6", "4.5", "Agree strongly", "Somewhat agree", "Not agree", "Agree/Disagree",
                 "Strongly", "Neither", "Unsure", "Don't know", "Strongly agre", "Strongy disagree", "Disagre",
-                "De acuerdo", "Totalmente de acuerdo", "En desacuerdo", "4 - Disagree", "Strongly agree (1)",
+                "Muy de acuerdo", "Algo de acuerdo", "4 - Disagree", "Strongly agree (1)",
                 "Very disagree", "Dissatisfied", "None", "-", "null", "nan"],
     "county": ["Montgomery County, PA", "Montgomery, TX", "Prince William", "Prince George", "Arundel", "Anne",
                "Queen Anne", "Baltimore City", "Baltimore County", "Howard", "Washington", "Fairfax City",
@@ -116,6 +116,14 @@ def test_header_drift_never_assigns_wrong_column(column):
             continue  # loud failure is acceptable
         owners = [c for c, (src, _) in df.attrs["column_methods"].items() if src == new]
         assert owners in ([], [column]), f"{name}: {new!r} assigned to {owners}"
+
+
+@pytest.mark.parametrize("raw,code", [("Totalmente en desacuerdo", 1), ("En desacuerdo", 2),
+                                      ("Ni de acuerdo ni en desacuerdo", 3), ("De acuerdo", 4),
+                                      ("Totalmente de acuerdo", 5), ("TOTALMENTE DE ACUERDO.", 5)])
+def test_spanish_likert_approved(raw, code):
+    lab, how, status = ec.map_value(ec.clean_str(raw), PV["likert5"])
+    assert (CFG["vocab"]["likert5"]["canonical"][lab], status) == (code, ec.VALID)
 
 
 def _one(column, value, **edits):
@@ -191,7 +199,7 @@ def test_conflicting_ids_block(ids, blocked):
 
 @pytest.mark.parametrize("column,value", [("training_date", "10/01/2026"), ("county", "Baltimore"),
                                           ("form_language", "Inglés"), ("recommend", "Very likely"),
-                                          ("presenter_engaged", "De acuerdo"), ("role", "Teacher")])
+                                          ("presenter_engaged", "Muy bueno"), ("role", "Teacher")])
 def test_format_drift_warns(column, value):
     x = synthetic_frame(CFG)
     x[header(CFG, column)] = value
