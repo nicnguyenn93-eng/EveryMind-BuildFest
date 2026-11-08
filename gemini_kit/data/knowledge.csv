@@ -1,0 +1,4 @@
+item,pre_mean,post_mean,gain,pre_agree_pct,post_agree_pct,newly_confident_pct,already_confident_pct,n
+Identify mental health challenges,3.82,4.32,0.5,72.8,91.7,20.9,72.8,1255
+Describe 988 and how it works,3.25,4.41,1.16,46.7,92.3,47.6,46.7,1255
+Know when to use 988,3.46,4.51,1.05,56.1,94.2,39.5,56.1,1255
