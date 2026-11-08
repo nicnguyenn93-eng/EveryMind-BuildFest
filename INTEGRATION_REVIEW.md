@@ -289,3 +289,43 @@ and private review outputs remain ignored and untracked by Git.
 The complete suite passed again with DNS/socket access blocked: 106 tests and
 67 subtests, including the installed English/Spanish Presidio model checks and
 John's cleaning checks. Dependency validation reports no broken requirements.
+
+## Nimi reporting backend integration
+
+The local merge checkpoint `703d4eb` preserves `origin/nimi-branch` at `ca3aa95`.
+The following checkpoint `1d12a6b` removes Nimi's Streamlit app and UI tests from
+the final tree so a separately developed frontend can merge independently.
+`79e64b6` connects the reporting code through `report_service.py`, restores its
+action catalog, and publishes the `everymind.report.v1` JSON schema and frontend
+contract. Primary pipeline dependency pins are retained; the optional provider
+SDK is installed with `requirements-report.txt` and adds no frontend framework.
+
+The service reads the full censored CSV and matching manifest, rejects stale
+dataset selections, and returns ordinary analysis/report dictionaries. It does
+not rerun cleaning, initialize Presidio, or read original-comment sidecars.
+Provider requests use allowlisted aggregate evidence by default. Including
+paraphrases still requires explicit opt-in and matching human/privacy approval.
+Missing keys, API failures and invalid model responses yield labeled templates;
+withheld audiences receive no proposed action and cause no provider call.
+
+Integration fixes align the reporting prompt with evidence-ID citations rather
+than the separate Gemini kit's table/cell schema, calculate template differences
+from unrounded values, bound request timeouts/retries, close owned clients, and
+sanitize provider errors. Numeric consistency checks are not semantic validation.
+Catalog membership is enforced, but catalog thresholds remain metadata rather
+than automatically evaluated eligibility rules; the offline template selects the
+first catalog option when evidence is publishable. These limits are documented
+for the frontend owner.
+
+The combined suite passed **134 tests and 67 subtests** with DNS/socket access
+blocked, including the existing cleaning and installed EN/ES model checks. The
+real 1,299-row, 77-column export also passed six audience flows with fake Gemini
+clients and the offline template path, while raw/private-original reads and all
+network calls were blocked. Current analysis matches the saved analysis JSON;
+source, stage, manifest and analysis hashes are unchanged. No frontend files or
+primary runtime pins differ from the pre-integration `ea85075` state. `pip check`
+reports no broken requirements. Details are retained in the ignored
+`private_data/reports/72b08ff71ede/nimi_backend_verification.json`.
+
+Live Gemini verification awaits the user's local key entry. No real provider
+request has been made as part of this integration.
