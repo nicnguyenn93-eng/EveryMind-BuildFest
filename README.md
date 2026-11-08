@@ -78,9 +78,15 @@ stage contains John's normalized text. Detection offsets refer to
 the cleaned CSV. John's core `Result.data` and existing notebook analysis logic
 remain available; this command publishes no separate analysis stage.
 
-John's existing heuristic chooses English/Spanish per comment, with form-language
-fallback. Presidio models and rules are unchanged. Unsupported routed languages
-on nonblank comments stop processing. No translation or LLM hook is enabled.
+The cleaner detects English/Spanish separately for each comment using the local
+Lingua detector, then runs exactly one matching Presidio model. Text detection
+overrides the form language at a confidence score of at least 0.80, configured in
+`everymind_cleaning/schema.json` as `text.language_confidence_threshold`.
+Uncertain, ambiguous, and nonlinguistic answers use the form language and receive
+a private review flag. Mixed comments use their dominant language. Presidio
+models and rules are unchanged; no translation or LLM hook is enabled.
+See [language routing and review fields](everymind_cleaning/README.md#language-routing)
+for fallback and failure behavior.
 
 All checks and CSV/JSON verification finish before the stage files are published.
 Ordinary replacement errors restore prior outputs across stage folders. Abrupt
@@ -226,5 +232,6 @@ recorded for review instead of treating every target as guaranteed detection.
 The supplied survey has been processed and checked. See
 [BASELINE_REVIEW.md](BASELINE_REVIEW.md) for preservation checks, counts,
 synthetic gaps, and the first local comment spot-check. A major observed issue
-is that the source language label sometimes differs from the written language;
-this baseline preserves the requested field-based routing.
+is that the source language label sometimes differs from the written language.
+The standalone historical baseline retains field-based routing; the shared
+cleaning pipeline now detects each comment's language and flags its fallbacks.

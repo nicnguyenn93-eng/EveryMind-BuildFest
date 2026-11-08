@@ -24,7 +24,7 @@ import csv
 import tempfile
 import unicodedata
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -38,13 +38,16 @@ except ImportError:  # fuzzy tier is optional; exact / alias / contains still wo
 
 if __package__:
     from . import privacy_adapter
+    from .language_routing import DEFAULT_CONFIDENCE_THRESHOLD, detector_metadata, resolve_language
 else:  # Retain John's direct-module import convention for existing consumers.
     import privacy_adapter
+    from language_routing import DEFAULT_CONFIDENCE_THRESHOLD, detector_metadata, resolve_language
 
 SOURCE_ROW = "__source_row"
 PRIVACY_REVIEW_COLUMNS = [
     "source_row", "original_id", "response_id", "field", "source_field",
-    "source_language", "form_language", "language", "original_text",
+    "source_language", "form_language", "language", "detected_language",
+    "language_confidence", "language_source", "language_review_required", "original_text",
     "normalized_input", "redacted_text", "normalization_changed", "status", "detections",
 ]
 
@@ -648,24 +651,9 @@ def detect_survey_versions(df: pd.DataFrame, cfg: dict, audit: Audit) -> pd.Data
 # ----------------------------------------------------------------------------------------
 # Step 9: free text
 # ----------------------------------------------------------------------------------------
-_ES = {"el", "la", "los", "las", "de", "que", "y", "en", "por", "para", "con", "es", "una", "un", "muy", "más", "mas",
-       "pero", "como", "sobre", "fue", "nos", "mi", "lo", "se", "al", "del", "aprendí", "aprendi", "ayuda", "gracias",
-       "entrenamiento", "nada", "todo", "bien", "cómo", "qué", "puedo", "personas", "salud", "ayudar", "llamar"}
-_EN = {"the", "and", "to", "of", "is", "it", "was", "for", "that", "this", "about", "more", "how", "what", "i", "you",
-       "my", "with", "be", "on", "in", "can", "learned", "people", "help", "someone", "when", "use", "call", "nothing"}
-
-
 def detect_language(text: str, fallback: str = "unknown") -> str:
-    toks = re.findall(r"[a-záéíóúñü]+", text.casefold())
-    if not toks:
-        return fallback
-    es = sum(t in _ES for t in toks) + 2 * len(re.findall(r"[áéíóúñ¿¡]", text.casefold()))
-    en = sum(t in _EN for t in toks)
-    if es > en:
-        return "es"
-    if en > es:
-        return "en"
-    return fallback
+    """Compatibility helper; detailed routing is retained in the private review."""
+    return resolve_language(text, fallback).language
 
 
 def classify_response(text: str, unclear: set, none_: set, keep: set = frozenset()) -> str:
@@ -699,6 +687,7 @@ def process_text(df: pd.DataFrame, cfg: dict, audit: Audit,
     df = df.drop(columns=SOURCE_ROW, errors="ignore")
     df.attrs.pop("source_rows", None)
     t = cfg["text"]
+    language_routing = detector_metadata(t.get("language_confidence_threshold", DEFAULT_CONFIDENCE_THRESHOLD))
     unclear = {match_key(x) for x in t["unclear_phrases"]} | {""}
     none_ = {match_key(x) for x in t["none_phrases"]}
     keep = {match_key(x) for x in t.get("meaningful_short_answers", [])}
@@ -724,7 +713,9 @@ def process_text(df: pd.DataFrame, cfg: dict, audit: Audit,
 
     for c in text_cols:
         raw = df[c].map(lambda v: "" if is_blank(v) else str(v))
-        lang = pd.Series([detect_language(x, fb) if x else "none" for x, fb in zip(raw, form_lang)], index=df.index)
+        decisions = [resolve_language(x, fb, language_routing["confidence_threshold"])
+                     for x, fb in zip(raw, form_lang)]
+        lang = pd.Series([decision.language for decision in decisions], index=df.index)
         cat = raw.map(lambda x: classify_response(x, unclear, none_, keep))
         distress = raw.map(lambda x: bool(distress_re.search(match_key(x))) if x else False)
         df[f"{c}__lang"] = lang
@@ -757,7 +748,7 @@ def process_text(df: pd.DataFrame, cfg: dict, audit: Audit,
                 "response_id": str(df["response_id"].iloc[position]), "field": c,
                 "source_field": df.attrs.get("column_methods", {}).get(c, (c,))[0],
                 "source_language": originals.get(source_row, {}).get("form_language", ""),
-                "form_language": form_lang.iloc[position], "language": language,
+                "form_language": form_lang.iloc[position], **asdict(decisions[position]),
                 "original_text": verbatim[position], "normalized_input": text,
                 "redacted_text": replacement, "normalization_changed": verbatim[position] != text,
                 "status": status,
@@ -784,13 +775,13 @@ def process_text(df: pd.DataFrame, cfg: dict, audit: Audit,
               "Raw comments and distress flags are written only to the private folder.",
               details=report)
     private.attrs["privacy_review"] = review
-    private.attrs["privacy_summary"] = summarize_privacy(review, privacy_adapter.versions(), connected)
+    private.attrs["privacy_summary"] = summarize_privacy(review, privacy_adapter.versions(), connected, language_routing)
     private.attrs["cleaned_stage"] = cleaned_stage
     private.attrs["censored_stage"] = censored_stage if connected else pd.DataFrame()
     return df, private
 
 
-def summarize_privacy(review, versions, connected):
+def summarize_privacy(review, versions, connected, language_routing=None):
     statuses, entities = Counter(), Counter()
     languages = {}
     mismatches = 0
@@ -811,9 +802,13 @@ def summarize_privacy(review, versions, connected):
         **{status: statuses[status] for status in ("changed", "unchanged", "blank", "pending")},
         "normalization_changed": sum(record["normalization_changed"] for record in review),
         "form_language_disagreements": mismatches,
+        "language_fallbacks": sum(r["language_source"] == "form_fallback" for r in review),
+        "language_review_required": sum(r["language_review_required"] for r in review),
+        "language_sources": dict(Counter(r["language_source"] for r in review)),
+        "language_detector": language_routing,
         "detections_by_entity_type": dict(sorted(entities.items())), "by_language": languages,
         "versions": versions, "tool_connected": connected,
-        "routing": "John's existing per-comment detect_language with form-language fallback",
+        "routing": "Per-comment English/Spanish Lingua detection; flagged form-language fallback; one model per comment",
         "offset_basis": "normalized_input; zero-based Python characters, exclusive end",
         "review_required": True,
     }
