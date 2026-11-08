@@ -11,3 +11,11 @@ Catalog threshold fields describe proposed rules; the application checks catalog
 but does not automatically evaluate those thresholds. Do not claim a threshold was met
 without the current evidence supporting that comparison. Treat numerical validation as a
 consistency check, not proof that an interpretation or recommendation is correct.
+
+For metrics `neutral_on_either` and `not_agree_on_either`, "either" is an inclusive
+OR: the respondent was neutral, or below agreement respectively, on **at least
+one** post-training 988 item. Do not imply both items, neither item, or a combined
+classification across time. A neutral post-training answer does not establish
+that the same respondent was neutral before training; avoid "remained neutral."
+Keep the selected audience explicit. An all-respondent aggregate cannot establish
+a student-specific result merely because an action-catalog label mentions students.
