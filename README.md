@@ -235,3 +235,15 @@ synthetic gaps, and the first local comment spot-check. A major observed issue
 is that the source language label sometimes differs from the written language.
 The standalone historical baseline retains field-based routing; the shared
 cleaning pipeline now detects each comment's language and flags its fallbacks.
+
+## Imported analysis tools
+
+Main's descriptive statistics, reviewed-comment evidence, and Gemini citation
+kit are included. John's cleaner and local Presidio remain the primary data
+preparation path. The legacy `clean.py` loader, configuration, and synthetic
+examples are retained for compatibility and analysis regression checks.
+The old mock UI and report/PDF scaffolding are not restored.
+
+See [analysis handoff](docs/analysis_handoff.md) and
+[Gemini kit](gemini_kit/README.md). The provider SDK remains optional;
+analysis and prompt dry runs do not call a provider.

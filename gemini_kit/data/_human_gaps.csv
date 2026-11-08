@@ -1,0 +1,8 @@
+gap_id,gap,kind,priority,effort,metric,current,target,unit,n
+intent,Knowing is not intending,Behavioral intent,High,Medium,% of people who know when to use 988 who rate their chance of calling 9–10,50.6,65.0,%,265
+students,Students are not engaged,Delivery,High,Medium,Student NPS,-2.0,20.0,nps,1019
+recognition,Recognizing a crisis lags,Knowledge,High,Low,"Average gain on ""I can identify mental health challenges"" (1–5 scale)",0.5,0.8,pts,1255
+measurement,The survey misses behavior,Measurement,High,Low,% of surveys that ask how likely people are to call 988,23.4,100.0,%,1299
+questions,Questions go unanswered,Knowledge,Medium,Low,% of written feedback that is an unanswered question,39.1,15.0,%,558
+language,Spanish speakers get an English form,Access,Medium,Low,% of Spanish speakers giving contradictory answers,6.8,2.0,%,74
+sessions,Quality varies by session,Delivery,Emerging,Low,% of sessions (10+ responses) with NPS below 0,37.0,18.0,%,27

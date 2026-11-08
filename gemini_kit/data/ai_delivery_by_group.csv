@@ -1,0 +1,7 @@
+dimension,group,n,engaged_mean,engaged_pct_agree,knew_subject_mean,knew_subject_pct_agree,organized_mean,organized_pct_agree
+audience,Adult,204,4.65,97.1,4.75,98.0,4.75,97.5
+audience,Student,908,4.3,87.3,4.42,89.4,4.45,90.9
+county,Anne Arundel,778,4.32,88.0,4.43,90.2,4.46,91.9
+county,Montgomery,33,4.73,97.0,4.76,97.0,4.7,90.9
+county,Prince George's,286,4.43,90.9,4.58,92.3,4.6,92.3
+county,Queen Anne's,11,4.45,90.9,4.45,90.9,4.55,100.0

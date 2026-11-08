@@ -1,0 +1,54 @@
+[
+  {
+    "dataset_key": "sha256:971c9cc0a973f3fb8c680c089d1108ee2d9b08e4742c6e75f79acdfca75a98ce",
+    "audience": "Students",
+    "evidence_id": "STUDENTS_EXPLAIN_988_BEFORE",
+    "survey_question": "Explain 988: recalled before agreement",
+    "metric_type": "paired_agreement",
+    "numerator_or_score_sum": 5,
+    "valid_denominator": 10,
+    "audience_total": 10,
+    "unit": "percent",
+    "display_value": "50.0%",
+    "caveat": "Retrospective self-report; limited sample (10-29 valid pairs)."
+  },
+  {
+    "dataset_key": "sha256:971c9cc0a973f3fb8c680c089d1108ee2d9b08e4742c6e75f79acdfca75a98ce",
+    "audience": "Students",
+    "evidence_id": "STUDENTS_EXPLAIN_988_POST",
+    "survey_question": "Explain 988: post-training agreement",
+    "metric_type": "paired_agreement",
+    "numerator_or_score_sum": 9,
+    "valid_denominator": 10,
+    "audience_total": 10,
+    "unit": "percent",
+    "display_value": "90.0%",
+    "caveat": "Retrospective self-report; limited sample (10-29 valid pairs)."
+  },
+  {
+    "dataset_key": "sha256:971c9cc0a973f3fb8c680c089d1108ee2d9b08e4742c6e75f79acdfca75a98ce",
+    "audience": "All respondents",
+    "evidence_id": "ALL_RESPONDENTS_EXPLAIN_988_BEFORE",
+    "survey_question": "Explain 988: recalled before agreement",
+    "metric_type": "paired_agreement",
+    "numerator_or_score_sum": 24,
+    "valid_denominator": 29,
+    "audience_total": 30,
+    "unit": "percent",
+    "display_value": "82.8%",
+    "caveat": "Retrospective self-report; limited sample (10-29 valid pairs)."
+  },
+  {
+    "dataset_key": "sha256:971c9cc0a973f3fb8c680c089d1108ee2d9b08e4742c6e75f79acdfca75a98ce",
+    "audience": "All respondents",
+    "evidence_id": "ALL_RESPONDENTS_EXPLAIN_988_POST",
+    "survey_question": "Explain 988: post-training agreement",
+    "metric_type": "paired_agreement",
+    "numerator_or_score_sum": 28,
+    "valid_denominator": 29,
+    "audience_total": 30,
+    "unit": "percent",
+    "display_value": "96.6%",
+    "caveat": "Retrospective self-report; limited sample (10-29 valid pairs)."
+  }
+]

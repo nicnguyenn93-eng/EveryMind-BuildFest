@@ -1,0 +1,14 @@
+{
+  "school_staff": {
+    "status": "suppressed",
+    "evidence": [],
+    "search_results": [],
+    "theme_counts": []
+  },
+  "rules": [
+    "Require at least 10 valid respondents per statistic.",
+    "Label 10-29 valid respondents limited.",
+    "Withhold School staff figures and paraphrases (nine members).",
+    "Withhold complementary releases that reveal a suppressed result; use one dimension at a time."
+  ]
+}

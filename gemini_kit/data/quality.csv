@@ -1,0 +1,7 @@
+flag,n,decision
+Finished in under 20 seconds,16,Excluded
+Answers contradict each other (likely misread scale),23,Excluded
+Likely double submission,5,Excluded
+Rated themselves lower after than before,108,Kept
+Survey more than 30 days after training,14,Kept
+Answer recoded from a non-standard label,24,Kept
