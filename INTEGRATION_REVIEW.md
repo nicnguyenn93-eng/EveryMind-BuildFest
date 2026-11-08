@@ -110,3 +110,27 @@ values. Both retain source-row and original-ID linkage. John's Result.data
 retains its original schema; no separate analysis stage is published.
 See the repository README and the generated
 private_data/README.md for the current paths.
+
+The real three-stage run retained all 1,299 source records. Raw remains 20
+columns; cleaned and censored each have 51 columns, including linkage. All
+non-comment values match between the two stage CSVs, and shared structured
+fields match the previous John pipeline result. All 2,598 review entries align
+with the original source text, normalized cleaned text, and censored text.
+The same 76 comment fields changed as before; 1,638 nonblank comments were
+unchanged and 884 were blank. All 293 calling-likelihood scores, 1,006 blanks,
+and four valid zeros remain. These counts do not measure detection accuracy.
+
+The workbook and lossless raw CSV retain their original hashes; every CSV
+field was compared against the workbook. All 17 earlier artifacts remain
+available with matching hashes at their new or archived locations. Stage-file
+hashes match the manifest, and all private data files are Git-ignored. Detailed
+local checks are in
+`private_data/reports/72b08ff71ede/stage_verification.json`.
+
+Verification: the combined suite passed **49 tests and 13 subtests**, including
+John's ten real-data cleaning checks and installed English/Spanish model checks
+with network, downloads, and GPU use blocked. Stage-specific checks cover row
+linkage after duplicate removal, comment-only changes, source mutation rejection,
+and rollback across folders on a late publication failure. All 51 notebook code
+cells parse, saved outputs are empty, and the existing analysis cells remain
+unchanged. The optional analysis notebook was not executed.

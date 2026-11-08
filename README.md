@@ -61,6 +61,10 @@ Each completed run writes these stages, grouped by its source-file hash prefix:
 | 2 | `private_data/censoring/<key>/` | `censored_<key>.csv`: the same columns and rows as cleaned, with only comment values replaced. Includes the summary and private before/after reviews. |
 | — | `private_data/reports/<key>/` | Cleaning audit, unknown-label review, private distress review, and `manifest.json` listing stage order, files, counts, and hashes. |
 
+On the supplied survey, raw contains 1,299 rows and 20 columns. Cleaned and
+censored each contain 1,299 rows and 51 columns, including cleaning metadata
+and row linkage. Censoring changes only the two comment fields.
+
 `private_data/README.md` links to the latest completed run. The stage CSVs share
 `source_row`, `original_id`, and `response_id`; use these to trace a response
 through normalization, duplicate removal, and censoring. `source_row` counts
