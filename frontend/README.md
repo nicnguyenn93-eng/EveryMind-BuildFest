@@ -14,9 +14,10 @@ censored export. Opening the page without the API displays startup instructions;
 older prepared aggregates are not substituted.
 
 County and audience controls remain inside the report. Gemini has an explicit
-aggregate-only button and always uses the selected audience across all surveyed
-locations, irrespective of county. No key or respondent/comment rows reach the
-frontend. Known non-students is a role classification rather than a measured age.
+button for sending statistics and censored written responses and always uses the selected audience across all surveyed
+locations, irrespective of county. Nonblank censored responses are eligible without
+manual approval; raw originals and respondent IDs stay local. The dashboard does
+not expose comment rows, though a generated draft may quote censored wording. Known non-students is a role classification rather than a measured age.
 
 See [HTTP contract, scope and metric definitions](../docs/local_web_api.md).
 

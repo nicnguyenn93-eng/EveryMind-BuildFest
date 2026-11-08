@@ -3,7 +3,7 @@
 Run Netra's connected frontend locally with `python -m pip install -r requirements-web.txt`
 and `python -m everymind_web`, then open **http://127.0.0.1:8000**. Existing censored
 datasets and new raw Excel/CSV uploads use the same pipeline. Charts and map use
-the selected censored export; Gemini is an explicit aggregate-only action.
+the selected censored export; Gemini explicitly receives statistics and censored written responses, without manual comment approval.
 See [local web/API setup and contract](docs/local_web_api.md).
 
 John's `everymind_cleaning` package is the primary pipeline. It reads Excel or

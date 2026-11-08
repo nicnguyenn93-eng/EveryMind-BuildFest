@@ -63,18 +63,20 @@ def test_http_contract_and_local_only_security(exported):
         assert c.get(f"/api/datasets/{ds['dataset_id']}/dashboard?audience=Unknown").status_code==400
 
 
-def test_report_has_wider_scope_and_never_accepts_county_or_comments(exported):
+def test_report_has_wider_scope_and_includes_censored_comments(exported):
     from report_service import generate_report
     reporter=Mock(wraps=generate_report)
     with TestClient(create_app(private_root=exported.root, reporter=reporter, key_loader=lambda _: None),base_url='http://localhost') as c:
         ds=c.get('/api/datasets').json()['datasets'][0]
-        body=dict(dataset_id=ds['dataset_id'], expected_dataset_key=ds['dataset_key'], use_llm=False, audience='Students')
+        body=dict(dataset_id=ds['dataset_id'], expected_dataset_key=ds['dataset_key'], use_llm=False, audience='Students', input_policy='censored_comments_v1')
         result=c.post('/api/reports',headers=HEADERS,json=body)
         assert result.status_code==200
         assert result.json()['scope']=='All surveyed locations · Students'
         assert result.json()['report']['mode']=='template'
         assert reporter.call_args.args==(exported.path, 'Students')
-        assert 'include_approved_comments' not in reporter.call_args.kwargs
+        assert reporter.call_args.kwargs['include_censored_comments'] is True
+        assert result.json()['report']['censored_comment_count']==40
+        assert result.json()['report']['input_policy']=='censored_comments_v1'
         assert c.post('/api/reports',headers=HEADERS,json={**body,'county':'Montgomery'}).status_code==422
         assert c.post('/api/reports',headers=HEADERS,json={**body,'use_llm':'False'}).status_code==422
         assert c.post('/api/reports',headers=HEADERS,json={**body,'include_approved_comments':True}).status_code==422
@@ -87,7 +89,7 @@ def test_stale_dataset_rejected_before_provider(exported):
         c.get(f"/api/datasets/{ds['dataset_id']}/dashboard")
         exported.path.write_bytes(exported.path.read_bytes()+b'\n')
         assert c.get(f"/api/datasets/{ds['dataset_id']}/dashboard").status_code==409
-        assert c.post('/api/reports',headers=HEADERS,json=dict(dataset_id=ds['dataset_id'],expected_dataset_key=ds['dataset_key'])).status_code==409
+        assert c.post('/api/reports',headers=HEADERS,json=dict(dataset_id=ds['dataset_id'],expected_dataset_key=ds['dataset_key'],input_policy='censored_comments_v1')).status_code==409
         reporter.assert_not_called()
 
 
@@ -160,3 +162,12 @@ def test_display_metric_protects_small_valid_complement(exported):
     county=next(row for row in value['cube'] if row['county']=='Montgomery' and row['role']=='(all)' and row['split_dim']=='none')
     assert root['gain_index'] is not None
     assert county['gain_index'] is None
+
+
+def test_old_report_page_must_reload_before_new_comment_payload(exported):
+    reporter=Mock(side_effect=AssertionError('Stale UI must not call the provider'))
+    with TestClient(create_app(private_root=exported.root,reporter=reporter),base_url='http://localhost') as c:
+        ds=c.get('/api/datasets').json()['datasets'][0]
+        result=c.post('/api/reports',headers=HEADERS,json=dict(dataset_id=ds['dataset_id'],expected_dataset_key=ds['dataset_key']))
+        assert result.status_code==409 and 'Reload' in result.json()['detail']
+        reporter.assert_not_called()

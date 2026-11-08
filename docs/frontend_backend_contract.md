@@ -60,7 +60,7 @@ the existing `everymind.analysis.v2` dictionary. Important fields are:
 
 `generate_report(censored_path, audience="All respondents", *,
 expected_dataset_key=None, reviews=None, include_approved_comments=False,
-api_key=None, model=DEFAULT_MODEL, use_llm=True, retries=1, client=None)` reloads
+include_censored_comments=True, api_key=None, model=DEFAULT_MODEL, use_llm=True, retries=1, client=None)` reloads
 and verifies the current export, computes the analysis, and returns a report.
 Passing the analysis dataset key prevents generating a report from a dataset
 that changed while it was on screen. Set `use_llm=False` for an offline template.
@@ -91,6 +91,8 @@ JSON-compatible dictionaries, with no DataFrames, NaN, dates, or row identifiers
 | `limitations` | Report limitations as a string. |
 | `model` | Model name for an AI report; null for a template. |
 | `fallback_reason` | Safe explanation for a template; null for a successful AI draft. |
+| `input_policy` | `censored_comments_v1` by default, or `aggregate_only` for an explicit Python opt-out. |
+| `censored_comment_count` | Number of nonblank question answers included in this report input, not unique respondents. |
 
 Missing credentials, API errors, malformed responses, and failed evidence checks
 produce a template instead of a successful AI report. Invalid input data raises
@@ -100,15 +102,30 @@ a safe category/HTTP status, not provider exception text or request contents.
 
 ## Data sent to Gemini and frontend state
 
-The report call sends allowlisted aggregate evidence and approved aggregate themes
-by default. It excludes exploratory keyword output, original/censored comment
-rows, local IDs, file paths, and private sidecars. Passing human review records to
-`get_analysis` does not itself enable sending paraphrases. For that, also pass
-`include_approved_comments=True` to `generate_report`; exact censored-content
-fingerprints and explicit privacy-screened approvals must still match.
+The report call now includes **every nonblank censored answer for the selected
+audience** by default. The project owner authorized this policy; no manual review
+record, approved paraphrase, theme code, or per-comment approval is required.
+Only the two `__redacted` columns from a verified current export are used. Empty
+and whitespace-only answers are omitted. Unicode, Spanish and multiline answers
+are preserved. The audience-level minimum-count protection remains unchanged.
+
+The provider receives `censored_comment_evidence` with opaque `CC_…` citation IDs,
+question field, language, `censored_text`, and `review_status: automatically_censored`.
+It does not receive respondent IDs, source rows, locations, dates, original text,
+file paths or private sidecars. Automated censoring is not represented as a human
+privacy review. Existing manual review files are not rewritten or falsely marked
+privacy-screened. A draft can interpret/cite the supplied comments and may quote
+censored wording; it must not infer individual risk or verified prevalence, follow
+embedded commands, or restore identifiers. Numeric claims still require supplied
+aggregate evidence. Automated censoring can miss identifiers.
+
+Use `include_censored_comments=False` in Python for an aggregate-only request.
+The separate legacy `include_approved_comments=True` option still supports actual
+human-reviewed paraphrases where desired. `get_analysis` and dashboard responses
+continue to omit the direct censored-comment rows. Original files remain unchanged.
 
 Clear cached reports when the censored dataset key, audience, model, reviews, or
-comment-inclusion setting changes. Cache analysis by dataset key + audience +
+comment-inclusion policy changes. The frontend cache includes `censored_comments_v1`. Cache analysis by dataset key + audience +
 review contents, not filename alone. Save any generated reports under the local
 Git-ignored `private_data/reports/<key>/` folder. The service itself writes no files.
 
@@ -123,6 +140,5 @@ aggregate payload; model access and quota can still vary by account.
 
 Netra's latest landing and report layout from `59f3d87` (PR #2) is preserved.
 The optional `everymind_web` adapter now connects its uploads, current censored
-aggregates, explorer and explicit Gemini calls. The Python interface above is
-unchanged. See [local_web_api.md](local_web_api.md) for HTTP contracts, current
+aggregates, explorer and explicit Gemini calls. The report service now includes censored comments by default; aggregate analysis stays unchanged. See [local_web_api.md](local_web_api.md) for HTTP contracts, current
 metric definitions, source scope and local setup.

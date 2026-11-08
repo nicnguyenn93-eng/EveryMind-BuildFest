@@ -14,8 +14,8 @@ If the API fails, there is no key, or the answer fails the check twice, it retur
 deterministic template report instead (mode "template", with fallback_reason). It never raises
 for API problems, so the app keeps working.
 
-Approved comment paraphrases are NOT sent unless include_approved_comments=True, matching
-gemini_kit/run_gemini.py (free-tier prompts may be read by Google reviewers).
+The service can include user-authorized censored written responses without manual
+approval. Legacy reviewed paraphrases remain a separate optional input.
 
 Setup: pip install -r requirements-report.txt, then set GEMINI_API_KEY.
 Try:   python report.py            (live call on the synthetic fixture)
@@ -84,7 +84,7 @@ def draft_report(evidence: list, eligible_actions: list, **kwargs) -> dict:
     return draft_report_from_payload(payload, eligible_actions, **kwargs)
 
 
-def draft_report_from_payload(payload: dict, eligible_actions: list, *, include_approved_comments: bool = False,
+def draft_report_from_payload(payload: dict, eligible_actions: list, *, include_approved_comments: bool = False, include_censored_comments: bool = False,
                               model: str = DEFAULT_MODEL, api_key: Optional[str] = None, client=None,
                               use_llm: bool = True, retries: int = 1) -> dict:
     if payload.get("schema_version") != "everymind.analysis.v2":
@@ -92,7 +92,7 @@ def draft_report_from_payload(payload: dict, eligible_actions: list, *, include_
     actions = _actions(eligible_actions)
     if not actions:
         raise ValueError("No eligible actions to propose.")
-    sent = safe_payload(payload, include_approved_comments)
+    sent = safe_payload(payload, include_approved_comments, include_censored_comments)
     if not sent["quantitative_evidence"]:
         return template_report(payload, actions, "no publishable evidence (groups under 10 are withheld)")
     if not use_llm:
@@ -144,7 +144,7 @@ def _fallback_reason(error):
 
 
 # ----------------------------------------------------------------- what leaves the machine
-def safe_payload(payload: dict, include_approved_comments: bool) -> dict:
+def safe_payload(payload: dict, include_approved_comments: bool, include_censored_comments: bool = False) -> dict:
     key, audience = payload.get("dataset_key"), payload.get("audience")
     quant_cols = ["evidence_id", "survey_question", "metric_type", "numerator_or_score_sum", "valid_denominator",
                   "audience_total", "unit", "value", "display_value", "caveat"]
@@ -164,8 +164,23 @@ def safe_payload(payload: dict, include_approved_comments: bool) -> dict:
             if c.get("review_status") != "approved_privacy_screened":
                 raise ValueError("Only privacy-screened approved paraphrases may be sent.")
             comments.append({k: c.get(k) for k in ("comment_evidence_id", "source_field", "approved_paraphrase", "theme_ids")})
+    censored = []
+    if include_censored_comments:
+        seen = set()
+        for c in payload.get("censored_comment_evidence", []):
+            if c.get("dataset_key") != key or c.get("audience") != audience:
+                raise ValueError("Censored comment evidence scope does not match the current dataset/audience.")
+            identifier, text = c.get("comment_evidence_id"), c.get("censored_text")
+            if (c.get("review_status") != "automatically_censored" or c.get("sharing_basis") != "user_authorized"
+                    or c.get("source_field") not in ("most_valuable", "how_can_we_improve")
+                    or c.get("language") not in ("en", "es")
+                    or not isinstance(identifier, str) or not re.fullmatch(r"CC_[0-9a-f]{24}", identifier)
+                    or identifier in seen or not isinstance(text, str) or not text.strip()):
+                raise ValueError("Censored comment evidence is invalid.")
+            seen.add(identifier)
+            censored.append({name: c[name] for name in ("comment_evidence_id", "source_field", "language", "censored_text", "review_status")})
     return dict(audience=audience, quantitative_evidence=quant, qualitative_themes=themes,
-                approved_comment_evidence=comments, limitations=payload.get("limitations", []),
+                approved_comment_evidence=comments, censored_comment_evidence=censored, limitations=payload.get("limitations", []),
                 interpretation_rules=payload.get("interpretation_rules", []))
 
 
@@ -231,6 +246,7 @@ def validate(raw: dict, sent: dict, actions: list) -> None:
     records = {r["evidence_id"]: r for r in sent["quantitative_evidence"]}
     records.update({r["theme_id"]: r for r in sent["qualitative_themes"] if r.get("theme_id")})
     known = set(records) | {c["comment_evidence_id"] for c in sent["approved_comment_evidence"]}
+    known.update(c["comment_evidence_id"] for c in sent.get("censored_comment_evidence", []))
     action_ids = {a["action_id"] for a in actions}
 
     if not raw.get("summary"):

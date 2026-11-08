@@ -23,7 +23,7 @@ window.Live = (() => {
     if (state.processing) return;
     state.processing = true;
     loader.hidden = false; buildBtn.disabled = true;
-    loadStep(message, 'Processing on this computer. No survey comments are sent to Gemini.', 40);
+    loadStep(message, 'Processing on this computer. Gemini requests include statistics and censored comments when requested.', 40);
     try { return await work(); }
     catch (e) { error(e.message); }
     finally { state.processing = false; loader.hidden = true; syncGate(); }
@@ -44,25 +44,25 @@ window.Live = (() => {
     state.active = true;
     document.querySelector('.intake h2').textContent = 'A reading of the post-training survey';
     document.querySelector('.purpose .card li:last-child').textContent =
-      'Cleaning and censoring run on this computer through the local API. Gemini receives aggregates only when requested.';
+      'Cleaning and censoring run on this computer through the local API. Gemini receives statistics and censored written responses only when requested.';
     const gets = document.querySelectorAll('.purpose .card:nth-child(3) li');
     gets[0].textContent = 'Current headline figures and findings calculated from the selected censored export.';
     gets[1].textContent = 'An optional Gemini draft with cited evidence, proposed actions, owners and follow-up measures.';
     document.querySelector('.purpose .card:nth-child(2) li:nth-child(2)').textContent = 'John’s ingestion validates required survey headers and language routing before publishing outputs.';
     document.querySelector('.purpose .card:nth-child(2) li:last-child').textContent = 'A SHA-256 of the censored export ties all charts and report requests to an exact processed dataset.';
     document.querySelector('#insights .secthead .muted').textContent = 'Descriptive findings for the current audience and county. Each chart shows its valid denominator. Missing or withheld values are unknown.';
-    document.querySelector('footer .wrap').textContent = 'Current verified censored data → local aggregate analysis → optional Gemini draft. Raw → cleaned → censoring checkpoints remain local under private_data. Comments require separate review.';
+    document.querySelector('footer .wrap').textContent = 'Current verified censored data → local aggregate analysis → optional Gemini draft. Raw → cleaned → censoring checkpoints remain local under private_data. Censored comments are authorized for Gemini; automated redaction is not a human review.';
     document.querySelector('.privacy').textContent =
-      'Your upload is saved locally under private_data/raw, then cleaned and censored. Charts use that completed censored export. IDs and comments are never returned by this API. Only an explicit Gemini request sends aggregate evidence to Google; the API key stays on this computer.';
+      'Your upload is saved locally under private_data/raw, then cleaned and censored. Charts use that completed censored export. Respondent IDs stay local. An explicit Gemini request sends aggregate statistics and nonblank censored comments to Google. Generated drafts may quote censored wording; the API key stays on this computer.';
     document.getElementById('usedemo').textContent = 'No export to hand? Use an existing censored dataset instead';
     document.getElementById('lede').textContent =
       'Load a survey export, or choose an existing censored dataset. Every chart, finding and map will use the same selected dataset.';
     document.querySelector('#recs .secthead .muted').textContent =
-      'Generate a draft from current aggregate evidence. Its scope is the selected audience across all surveyed locations, including when the map is filtered to a county. Proposed actions require review.';
+      'Generate a draft from current statistics and censored written responses. Its scope is the selected audience across all surveyed locations, including when the map is filtered to a county. Proposed actions require review.';
     document.querySelector('#method .card:nth-child(2) ul').replaceChildren(...[
       'Retrospective self-report is descriptive, not causal; before-scores are recalled after training.',
       'This convenience sample does not represent all Maryland residents. The map covers Maryland; totals include other surveyed locations.',
-      'Unreviewed comments and keyword matches are not verified themes. This interface sends no comment text to Gemini.',
+      'Censored comments are sent to Gemini under project authorization without manual approval. Automated redaction can miss identifiers; qualitative interpretations remain drafts.',
       'NPS intervals, correlations, trends and historical robustness results are not calculated by this live adapter.'
     ].map(t => node('li', null, t)));
     AUDIENCES.adult.label = 'Known non-students';
@@ -173,8 +173,8 @@ window.Live = (() => {
         node('p',null,item ? `${item.display_value} / 10 among ${item.valid_denominator} valid recorded scores.` : 'Insufficient publishable scores.'),
         node('p','foot',item?.caveat || 'Missing and withheld values are unknown.')); cards.append(c);
     }
-    const comments=node('div','card wide');comments.append(node('p','kicker','Written responses'),node('h3',null,'Review before interpretation'),
-      node('p',null,'Comments were processed locally by Presidio. This interface does not display them or send them to Gemini. Semantic findings require a separate privacy-screened review.')); cards.append(comments);
+    const comments=node('div','card wide');comments.append(node('p','kicker','Written responses'),node('h3',null,'Censored feedback is included'),
+      node('p',null,'Gemini receives the nonblank Presidio-censored responses for the selected audience without a manual approval step. Respondent IDs and original-comment files stay local. Interpretations cite opaque comment IDs and remain drafts.')); cards.append(comments);
     renderRecommendations();
     clear('method-list').append(...[
       `Dataset fingerprint: ${d.dataset_key}. Every chart and the explorer use this same censored export.`,
@@ -186,7 +186,7 @@ window.Live = (() => {
     ].map(t=>node('li',null,t)));
     clear('quality-list').append(...['John’s cleaning and language decisions are preserved. No additional exclusions are applied by this interface.',
       'Empty, skipped, invalid and nonstandard scores retain their source status; only valid scores enter metrics.',
-      'Presidio does not approve comments for external use. API and model errors return a labeled template or a clear failure.'
+      'Censored responses are eligible for Gemini under project authorization. They are labeled automatically censored, without claiming human privacy review. API and model errors return a labeled template or a clear failure.'
     ].map(t=>node('li',null,t)));
     document.getElementById('map-note').textContent = 'The same censored dataset and selected audience drive this explorer. Click counties to inspect local statistics. Grey means no publishable figure. Fine splits and rings omit protected groups; Gemini always keeps the wider audience scope.';
     document.getElementById('coverage-line').textContent = d.counties.filter(c=>c.key !== ALL && c.available).map(c=>`${c.label}: ${c.n}`).join(' · ') + '. Small groups and secondary cells may be withheld.';
@@ -194,14 +194,15 @@ window.Live = (() => {
   }
   function renderRecommendations() {
     const host=clear('recs-list'), audience=audiences[SEL.audience];
-    const cacheKey=state.dataset.dataset_id+'|'+audience;
+    const cacheKey=state.dataset.dataset_id+'|'+audience+'|'+state.status.input_policy;
     const scope=node('p','scope wideview',`${audience} · All surveyed locations · county filter does not apply`);
-    const actions=node('div','legend'), ai=node('button','btn','Send aggregate statistics to Google Gemini'), offline=node('button','btn ghost','Generate offline template');
+    const actions=node('div','legend'), ai=node('button','btn','Send statistics and censored comments to Google Gemini'), offline=node('button','btn ghost','Generate offline template');
     ai.type=offline.type='button'; actions.append(ai,offline); host.append(scope,actions);
     const output=node('div'); host.append(output);
     const display = envelope => {
       output.replaceChildren(); const r=envelope.report;
       output.append(node('p','kicker',r.mode==='llm' ? `Gemini draft · ${r.model} · review required` : 'Offline template · review required'));
+      output.append(node('p','cap muted',`${r.censored_comment_count ?? 0} censored written responses in the report input · automatic censoring, no manual review`));
       if (r.fallback_reason) output.append(node('p','cap muted',r.fallback_reason));
       if (r.summary.length) r.summary.forEach(finding => {
         output.append(node('p',null,finding.text),node('p','cap muted','Evidence: '+finding.evidence_ids.join(', ')));
@@ -216,13 +217,13 @@ window.Live = (() => {
       output.append(node('p','foot',r.limitations));
     };
     if (state.reports.has(cacheKey)) display(state.reports.get(cacheKey));
-    else output.append(node('p','cap muted','No draft generated for this audience yet. Only aggregate evidence is sent; no IDs or comments.'));
+    else output.append(node('p','cap muted','No draft generated for this audience yet. The Gemini request includes statistics and censored comments for this audience; respondent IDs stay local.'));
     ai.disabled=!state.status.ai_configured;
     if (ai.disabled) ai.title='Configure the Gemini key on the local server; never enter it into the page.';
     const generate=async use_llm=>{
       ai.disabled=offline.disabled=true;output.replaceChildren(node('p','cap muted',use_llm?'Requesting a Gemini draft…':'Building an offline template…'));
       try {
-        const envelope=await api('reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataset_id:state.dataset.dataset_id,audience,expected_dataset_key:state.dashboard.dataset_key,use_llm})});
+        const envelope=await api('reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataset_id:state.dataset.dataset_id,audience,expected_dataset_key:state.dashboard.dataset_key,input_policy:state.status.input_policy,use_llm})});
         state.reports.set(cacheKey,envelope);display(envelope);
       } catch(e) {output.replaceChildren(node('p','verdict err',e.message));}
       finally {ai.disabled=!state.status.ai_configured;offline.disabled=false;}

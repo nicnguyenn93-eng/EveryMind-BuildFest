@@ -14,6 +14,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 import analysis
 from report import DEFAULT_MODEL
+from censored_comment_evidence import INPUT_POLICY
 from report_service import generate_report, ReportServiceError
 from .store import DatasetError, DatasetStore, StaleDatasetError
 
@@ -38,6 +39,7 @@ class ReportRequest(BaseModel):
     audience: Literal["All respondents", "Students", "Known non-students", "School staff", "Caregiver/parent", "Community member"] = "All respondents"
     expected_dataset_key: str
     use_llm: StrictBool = True
+    input_policy: Literal["censored_comments_v1"] | None = None
 
 
 def create_app(*, private_root=None, store=None, reporter=generate_report, key_loader=local_key):
@@ -82,7 +84,7 @@ def create_app(*, private_root=None, store=None, reporter=generate_report, key_l
     @app.get("/api/status")
     def status():
         return dict(schema_version="everymind.web.v1", ai_configured=bool(key_loader(root)),
-                    model=DEFAULT_MODEL, max_upload_bytes=MAX_UPLOAD, audiences=sorted(analysis.AUDIENCES))
+                    model=DEFAULT_MODEL, input_policy=INPUT_POLICY, max_upload_bytes=MAX_UPLOAD, audiences=sorted(analysis.AUDIENCES))
 
     @app.get("/api/datasets")
     def list_datasets():
@@ -117,9 +119,11 @@ def create_app(*, private_root=None, store=None, reporter=generate_report, key_l
 
     @app.post("/api/reports")
     def report(request: ReportRequest):
+        if request.input_policy != INPUT_POLICY:
+            raise HTTPException(409, "Report inputs now include censored written responses. Reload the page before generating a report.")
         export = datasets.resolve(request.dataset_id)
         result = reporter(export.path, request.audience,
-            expected_dataset_key=request.expected_dataset_key, use_llm=request.use_llm,
+            expected_dataset_key=request.expected_dataset_key, use_llm=request.use_llm, include_censored_comments=True,
             api_key=key_loader(root), model=DEFAULT_MODEL, retries=0)
         return dict(scope="All surveyed locations · " + request.audience, report=result)
 

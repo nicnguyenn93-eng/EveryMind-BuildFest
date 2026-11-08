@@ -45,7 +45,7 @@ This is a single-user local tool, not an authenticated hosted API.
 | `POST /api/uploads` | Multipart `file` (raw `.xlsx`/`.csv`); returns processing job ID (202). |
 | `GET /api/jobs/{job_id}` | Processing/ready/failed; ready includes the censored dataset handle. |
 | `GET /api/datasets/{sha}/dashboard?audience=All%20respondents` | `dataset_key`, audience, full analysis, county options/summaries, explorer cube and interpretation notes. |
-| `POST /api/reports` | `{dataset_id, audience, expected_dataset_key, use_llm}` → `{scope, report}`. Report uses `everymind.report.v1`. |
+| `POST /api/reports` | `{dataset_id, audience, expected_dataset_key, use_llm, input_policy:"censored_comments_v1"}` → `{scope, report}`. Report uses `everymind.report.v1`. |
 
 A changed or inconsistent dataset handle returns 409 before any provider call.
 Raw/checkpoint/old incomplete exports are not offered. Invalid requests return a
@@ -87,9 +87,23 @@ shown beside the generation buttons. A county is not accepted in report requests
 Use `GEMINI_API_KEY` / `GOOGLE_API_KEY`, or the ignored local
 `private_data/gemini_secrets.toml` with `GEMINI_API_KEY = "..."`. Never put the key
 in frontend code. No request is made on upload, page load or county/audience
-selection. The explicit **Send aggregate statistics to Google Gemini** button
-calls the existing report service with no comment opt-in or review sidecar.
-The service's checked aggregate-only payload and template fallback are unchanged.
+selection. The explicit **Send statistics and censored comments to Google Gemini**
+button sends the current aggregate evidence and every nonblank answer from the
+selected audience's two censored written-response columns. No manual approval,
+review-file record or theme code is required under the project owner's instruction.
+Responses are labeled automatically censored, not human-reviewed. Only opaque
+citation IDs, question fields, languages and censored text accompany the statistics;
+respondent IDs, individual metadata, original files and private sidecars stay local.
+Generated drafts may quote censored wording. Existing numerical/citation validation
+and template fallback remain in place. Censoring may still miss identifiers.
+
+The report body includes `input_policy: "censored_comments_v1"`, obtained from
+`GET /api/status`. An older page which still describes aggregate-only requests
+receives a reload error before any provider call. This is a contract-version check,
+not a per-comment approval step. The report JSON adds `input_policy` and
+`censored_comment_count`. The cache key includes the input policy along with the
+dataset hash and audience, so an old aggregate-only draft is not reused.
+
 The offline button never calls the provider. Each browser retains its generated
 report by dataset hash and audience for that page session; a new processed hash
 cannot inherit the previous report. Request failures and template mode are visible.
@@ -121,7 +135,20 @@ correctness of every interpretation or recommendation.
   non-student report can therefore propose a student action. Catalog eligibility and
   semantic suitability still need review; API wiring does not fix that business logic.
 
-The local report screenshot is kept in the ignored
+The earlier aggregate-only local report screenshot is kept in the ignored
 `private_data/reports/72b08ff71ede/web_integration/` folder. No private outputs,
 credentials or source data are committed. These integration checkpoints are local;
 publishing is separate.
+
+## Censored-comment policy update
+
+Manual comment approval was removed at the project owner's request. The full
+current export provides **1,714 nonblank written answers** (1,063 most-valuable;
+651 improvement), including 1,585 English and 129 Spanish answers. These are
+answers to two questions, not 1,714 unique respondents. Nothing is sampled or
+truncated. Preview artifacts are ignored under
+`private_data/reports/72b08ff71ede/censored_comments_preview/`.
+
+The direct comment handoff is isolated from the legacy manually reviewed theme/
+paraphrase workflow. The latter remains available for audited analysis without
+blocking Gemini's access to the current censored responses.

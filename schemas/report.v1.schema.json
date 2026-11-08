@@ -202,6 +202,21 @@
         }
       ],
       "title": "Fallback Reason"
+    },
+    "input_policy": {
+      "default": "aggregate_only",
+      "enum": [
+        "aggregate_only",
+        "censored_comments_v1"
+      ],
+      "title": "Input Policy",
+      "type": "string"
+    },
+    "censored_comment_count": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Censored Comment Count",
+      "type": "integer"
     }
   },
   "required": [
