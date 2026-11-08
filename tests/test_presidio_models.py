@@ -12,7 +12,7 @@ import socket
 import unittest
 from unittest.mock import patch
 
-from everymind_censoring.redact_pii import CENSORING_DATA, build_redactor
+from everymind_censoring.redact_pii import REPORTS_DATA, build_redactor
 
 
 # Fictional examples only. Target spans are review prompts, not a gold-standard
@@ -78,8 +78,8 @@ class InstalledModelTests(unittest.TestCase):
             for name in ("en_email", "es_email", "en_phone", "es_phone"):
                 case = next(case for case in report if case["case"] == name)
                 self.assertTrue(case["detections"], name)
-        CENSORING_DATA.mkdir(parents=True, exist_ok=True)
-        destination = CENSORING_DATA / "presidio_synthetic_review.json"
+        REPORTS_DATA.mkdir(parents=True, exist_ok=True)
+        destination = REPORTS_DATA / "presidio_synthetic_review.json"
         destination.write_text(json.dumps({"versions": engine.versions, "cases": report}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 

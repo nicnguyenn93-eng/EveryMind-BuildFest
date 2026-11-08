@@ -18,6 +18,7 @@ import pandas as pd
 from everymind_cleaning import everymind_clean as ec, privacy_adapter
 from everymind_cleaning.presidio_bridge import PresidioBridge, get_engine
 from everymind_cleaning import run_pipeline as runner
+from everymind_cleaning.stage_outputs import write_stage_outputs
 from everymind_censoring.redact_pii import Detection, Redaction, RedactionError
 
 
@@ -117,6 +118,8 @@ class CleaningIntegrationTests(unittest.TestCase):
                                {**original, "response_id": "008"}])
         self.assertEqual(3, len(result.data))
         self.assertEqual([2, 5, 6], result.private.source_row.tolist())
+        self.assertEqual([2, 5, 6], result.cleaned_stage.source_row.tolist())
+        self.assertEqual([2, 5, 6], result.censored_stage.source_row.tolist())
         self.assertEqual(["007", "007", "008"], result.private.original_id.tolist())
         self.assertEqual(2, int(result.data.flag_duplicate_id.sum()))
         self.assertEqual(2, int(result.data.flag_possible_duplicate.sum()))
@@ -243,6 +246,79 @@ with tempfile.TemporaryDirectory() as directory:
         completed = subprocess.run([sys.executable, "-c", program], cwd=runner.PACKAGE,
                                    capture_output=True, text=True)
         self.assertEqual(0, completed.returncode, completed.stderr)
+
+    def test_stage_files_preserve_linkage_and_only_censor_comment_values(self):
+        rows = [fictional_row(most_valuable='  “Hola”\nada@example.com  '),
+                fictional_row(response_id="008", most_valuable="I learned how to call 988.")]
+        result = self.process(rows)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            source = root / "raw" / "source.csv"
+            source.parent.mkdir()
+            payload = csv_bytes(rows)
+            source.write_bytes(payload)
+            paths = write_stage_outputs(result, root, source)
+            self.assertEqual(source.resolve(), paths["raw_source"])
+            self.assertEqual(payload, source.read_bytes())
+            self.assertEqual("cleaned", paths["cleaned"].relative_to(root).parts[0])
+            self.assertEqual("censoring", paths["censored"].relative_to(root).parts[0])
+            self.assertNotIn("analysis_ready", paths)
+            self.assertFalse((root / "analysis").exists())
+            def read(path):
+                with path.open(newline="") as handle:
+                    return list(csv.DictReader(handle))
+            clean, censored = [read(paths[name]) for name in ("cleaned", "censored")]
+            self.assertEqual(list(clean[0]), list(censored[0]))
+            self.assertIn("ada@example.com", clean[0]["most_valuable"])
+            self.assertNotIn("ada@example.com", censored[0]["most_valuable"])
+            for before, after in zip(clean, censored):
+                for key in ("source_row", "original_id", "response_id"):
+                    self.assertEqual(before[key], after[key])
+                for key in before:
+                    if key not in ("most_valuable", "improve"):
+                        self.assertEqual(before[key], after[key])
+            self.assertEqual("007", clean[0]["original_id"])
+            self.assertEqual("0.0", clean[0]["call_intent"])
+            manifest = json.loads(paths["manifest"].read_text())
+            self.assertEqual(["raw", "cleaned", "censored"], [stage["stage"] for stage in manifest["stages"]])
+            self.assertIn("cleaned", paths["guide"].read_text())
+
+    def test_stage_publication_rolls_back_all_folders(self):
+        rows = [fictional_row(most_valuable="ada@example.com")]
+        result = self.process(rows)
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            source = parent / "source.csv"
+            source.write_bytes(csv_bytes(rows))
+            root = parent / "private_data"
+            paths = write_stage_outputs(result, root, source)
+            self.assertNotEqual(source.resolve(), paths["raw_source"])
+            previous = {name: path.read_bytes() for name, path in paths.items()}
+            result.privacy_summary["test_attempt"] = 2
+            replace = Path.replace
+            def fail_guide(path, destination):
+                if path.name == "README.md":
+                    raise OSError("synthetic publication failure")
+                return replace(path, destination)
+            with patch.object(Path, "replace", fail_guide), self.assertRaises(OSError):
+                write_stage_outputs(result, root, source)
+            self.assertEqual(previous, {name: path.read_bytes() for name, path in paths.items()})
+            self.assertEqual([], list(root.glob(".stages-*")))
+
+    def test_stage_publication_rejects_changed_source_and_pending_privacy(self):
+        rows = [fictional_row()]
+        pending = self.process(rows, connect=False)
+        integrated = self.process(rows)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source.csv"
+            source.write_bytes(csv_bytes(rows))
+            with self.assertRaisesRegex(ValueError, "snapshots are required"):
+                write_stage_outputs(pending, root, source)
+            source.write_bytes(b"changed source")
+            with self.assertRaisesRegex(ValueError, "source changed"):
+                write_stage_outputs(integrated, root, source)
+            self.assertFalse((root / "cleaned").exists())
 
 
 @unittest.skipUnless(os.environ.get("RUN_PRESIDIO_INTEGRATION") == "1", "Set RUN_PRESIDIO_INTEGRATION=1 for installed-model checks.")

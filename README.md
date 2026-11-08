@@ -7,9 +7,9 @@ full-CSV Presidio baseline remain available for comparison. No LLM is called by
 the integrated command.
 
 Code is organized into `everymind_cleaning/` (John's primary pipeline) and
-`everymind_censoring/` (our import and Presidio utilities). The original workbook
-stays in `private_data/`; generated CSVs, censoring reviews, and integrated run
-folders live together in the Git-ignored `private_data/censoring/` directory.
+`everymind_censoring/` (our import and Presidio utilities). Data is kept in
+Git-ignored stage folders under `private_data/`: `raw/`, `cleaned/`, and `censoring/`,
+with supporting audits in `reports/`. Earlier mixed-layout outputs are retained in `archive/`.
 
 ## Setup
 
@@ -38,70 +38,74 @@ The baseline uses `presidio-analyzer==2.2.366`, `presidio-anonymizer==2.2.366`,
 The redaction script checks both model versions before processing and fails
 with a setup instruction if either is absent or has the wrong version.
 
-## Primary workflow: John's cleaner with Presidio
+## Primary workflow: inspect each stage
 
-Place the original workbook in `private_data/`, then run from the repository root:
+Place the workbook in `private_data/raw/`, then run from the repository root:
 
 ```bash
 python -m everymind_cleaning.run_pipeline
 ```
 
-This uses John's Excel reader directly; an intermediate CSV is optional:
+John's reader accepts Excel directly. CSV input is optional:
 
 ```bash
-python -m everymind_cleaning.run_pipeline --input private_data/censoring/survey.csv --output-dir private_data/censoring
+python -m everymind_cleaning.run_pipeline --input private_data/raw/survey.csv --output-dir private_data
 ```
 
-Results are grouped by the source-file hash prefix under
-`private_data/censoring/<dataset-key>/outputs/` and `private/`. They include John's
-cleaned CSV, cleaning audit, label-mapping review, private comments, and distress
-review, plus a detailed Presidio review CSV and a text-free summary JSON.
-The supplied survey yields 1,299 records and 75 cleaned/derived columns.
+Each completed run writes these stages, grouped by its source-file hash prefix:
 
-John's original values and mapping/quality rules are preserved. His existing
-heuristic selects English or Spanish **per comment**, with form-language fallback;
-the Presidio models and detection rules are unchanged. Missing/unsupported
-routed language codes on nonblank comments stop the run; blanks bypass detection. This
-heuristic is not a complete solution for mixed-language responses.
+| Order | Folder | Contents |
+| --- | --- | --- |
+| 0 | `private_data/raw/` | Original workbook or CSV, unchanged. External inputs are copied here for traceability. |
+| 1 | `private_data/cleaned/<key>/` | `cleaned_<key>.csv`: John's standardized values and normalized **uncensored** comments, immediately before Presidio. |
+| 2 | `private_data/censoring/<key>/` | `censored_<key>.csv`: the same columns and rows as cleaned, with only comment values replaced. Includes the summary and private before/after reviews. |
+| — | `private_data/reports/<key>/` | Cleaning audit, unknown-label review, private distress review, and `manifest.json` listing stage order, files, counts, and hashes. |
 
-The private redaction review includes source row, original ID, source language,
-form language, selected language, verbatim source text, normalized engine input,
-redacted text, and detection types/offsets/scores. Offsets refer to
-`normalized_input`, not the verbatim source. John's normalized comment columns
-remain available in the private file for his existing local keyword analysis;
-the additional `__original` columns retain source text. Source-row tracking does
-not participate in duplicate matching and is excluded from the cleaned table.
+`private_data/README.md` links to the latest completed run. The stage CSVs share
+`source_row`, `original_id`, and `response_id`; use these to trace a response
+through normalization, duplicate removal, and censoring. `source_row` counts
+logical source records from 2 after the header. Removed rows are listed in the
+audit. Provenance is excluded from John's duplicate comparisons.
 
-All validation checks must pass before publication. Outputs are staged and CSV/JSON
-contents verified before replacement; ordinary replacement errors roll back files
-already replaced. Abrupt OS/process termination during multi-file publication can
-still interrupt it. Existing standalone baseline outputs are not overwritten.
+The cleaned stage still contains uncensored text. Verbatim source comments are
+retained in the raw input and the censoring stage's private files; the cleaned
+stage contains John's normalized text. Detection offsets refer to
+`normalized_input` in the review CSV. The censored CSV has the same schema as
+the cleaned CSV. John's core `Result.data` and existing notebook analysis logic
+remain available; this command publishes no separate analysis stage.
 
-`redacted` means processed, **not verified anonymous**. The cleaned table retains
-response IDs, dates, and geography, and Presidio can miss identifiers. All files
-are local review outputs. Translation and LLM suggestion hooks stay disabled in
-the command and notebook workflow.
+John's existing heuristic chooses English/Spanish per comment, with form-language
+fallback. Presidio models and rules are unchanged. Unsupported routed languages
+on nonblank comments stop processing. No translation or LLM hook is enabled.
+
+All checks and CSV/JSON verification finish before the stage files are published.
+Ordinary replacement errors restore prior outputs across stage folders. Abrupt
+OS/process termination during multi-file publication is not an atomic transaction.
+All stages are local review data with IDs and metadata retained; redacted text
+still requires review. Existing results from the earlier mixed layout are in
+`private_data/archive/previous_censoring/`. Standalone Presidio results are kept
+separately in `private_data/censoring/baseline/`.
 
 See [everymind_cleaning/README.md](everymind_cleaning/README.md) for the notebook
-and dependency options. [INTEGRATION_REVIEW.md](INTEGRATION_REVIEW.md) records the
-real run, compatibility comparisons, and remaining detection problems.
+and Python interfaces, and [INTEGRATION_REVIEW.md](INTEGRATION_REVIEW.md) for
+compatibility checks and remaining detection problems.
 
 ## Convert the survey
 
-Place `BuildFest_EveryMind_Survey_Data_FULL.xlsx` in `private_data/`, then run:
+Place `BuildFest_EveryMind_Survey_Data_FULL.xlsx` in `private_data/raw/`, then run:
 
 ```bash
 python everymind_censoring/import_excel.py
 ```
 
-This reads the `Survey Data` worksheet and writes `private_data/censoring/survey.csv`.
+This reads the `Survey Data` worksheet and writes `private_data/raw/survey.csv`.
 The command prints the sheet name, data-row count, column count, and output path.
 The supplied workbook has 1,299 data rows and 20 columns.
 
 To use another workbook, worksheet, or destination:
 
 ```bash
-python everymind_censoring/import_excel.py --input private_data/another.xlsx --sheet "Survey Data" --output private_data/censoring/another.csv
+python everymind_censoring/import_excel.py --input private_data/raw/another.xlsx --sheet "Survey Data" --output private_data/raw/another.csv
 ```
 
 The converter preserves the original headers, column order, all rows, whitespace,
@@ -125,19 +129,19 @@ the repository. The converter does not print individual responses.
 python everymind_censoring/redact_pii.py
 ```
 
-This reads `private_data/censoring/survey.csv` and creates:
+This reads `private_data/raw/survey.csv` and creates:
 
-- `private_data/censoring/survey_presidio.csv`: the full CSV with only the two comment
+- `private_data/censoring/baseline/survey_presidio.csv`: the full CSV with only the two comment
   fields redacted. All other fields, original IDs, headers, and row order stay
   unchanged. Empty and whitespace-only comments stay exactly as written and
   bypass detection.
-- `private_data/censoring/survey_presidio.review.csv`: one row for each comment field,
+- `private_data/censoring/baseline/survey_presidio.review.csv`: one row for each comment field,
   including blank and unchanged comments. It contains the original text,
   redacted text, original ID, English/Spanish routing code, field name, status,
   and a JSON array of detection types, original-text offsets, and scores.
   `source_row` is the logical CSV record number, starting at 2 after the header;
   offsets are zero-based Python character indices with an exclusive end.
-- `private_data/censoring/survey_presidio.summary.json`: row/comment counts, mutually
+- `private_data/censoring/baseline/survey_presidio.summary.json`: row/comment counts, mutually
   exclusive changed/unchanged/blank counts, scanned counts, detections by type
   and language, and package/model versions. It contains no original responses
   or matched identifiers. Detections can overlap; the anonymizer resolves them
@@ -146,7 +150,7 @@ This reads `private_data/censoring/survey.csv` and creates:
 To use another source or output stem:
 
 ```bash
-python everymind_censoring/redact_pii.py --input private_data/censoring/another.csv --output private_data/censoring/another_presidio.csv
+python everymind_censoring/redact_pii.py --input private_data/raw/another.csv --output private_data/censoring/baseline/another_presidio.csv
 ```
 
 Every output must stay inside `private_data/`. The script prevents overwriting
@@ -212,7 +216,7 @@ RUN_PRESIDIO_INTEGRATION=1 python -m unittest discover -s tests -p test_cleaning
 This exercises fictional English and Spanish names, emails, phone numbers,
 addresses, schools, contextual identifiers, and harmless survey text. It blocks
 DNS/socket connections, model downloads, and GPU activation, and writes detailed
-results to `private_data/censoring/presidio_synthetic_review.json`. Detection gaps are
+results to `private_data/reports/presidio_synthetic_review.json`. Detection gaps are
 recorded for review instead of treating every target as guaranteed detection.
 
 The supplied survey has been processed and checked. See

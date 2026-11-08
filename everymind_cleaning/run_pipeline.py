@@ -6,23 +6,24 @@ from pathlib import Path
 
 from . import everymind_clean as ec, privacy_adapter
 from .presidio_bridge import PresidioBridge
-from everymind_censoring.redact_pii import CENSORING_DATA, PRIVATE_DATA, RedactionError
+from .stage_outputs import write_stage_outputs
+from everymind_censoring.redact_pii import RAW_DATA, PRIVATE_DATA, RedactionError
 
 
 PACKAGE = Path(__file__).resolve().parent
 SCHEMA = PACKAGE / "schema.json"
 REGISTRY = PACKAGE / "mapping_registry.json"
-DEFAULT_INPUT = PRIVATE_DATA / "BuildFest_EveryMind_Survey_Data_FULL.xlsx"
-DEFAULT_OUTPUT_DIR = CENSORING_DATA
+DEFAULT_INPUT = RAW_DATA / "BuildFest_EveryMind_Survey_Data_FULL.xlsx"
+DEFAULT_OUTPUT_DIR = PRIVATE_DATA
 
 
 def output_directories(dataset_key, output_dir=DEFAULT_OUTPUT_DIR):
     root = Path(output_dir).expanduser().absolute()
     if not root.resolve().is_relative_to(PRIVATE_DATA.resolve()):
         raise RedactionError("Generated survey outputs must stay inside private_data/.")
-    run = root / dataset_key
-    outputs, private = run / "outputs", run / "private"
-    for path in (outputs, private):
+    outputs = root / "censoring" / dataset_key
+    private = outputs / "private"
+    for path in (root / "raw", root / "cleaned", root / "reports", outputs, private):
         if not path.resolve().is_relative_to(PRIVATE_DATA.resolve()):
             raise RedactionError("Generated survey outputs must stay inside private_data/.")
     return outputs, private
@@ -37,17 +38,8 @@ def run(input_path=DEFAULT_INPUT, output_dir=DEFAULT_OUTPUT_DIR, *, bridge=None)
     bridge = bridge if bridge is not None else PresidioBridge()
     with privacy_adapter.using(bridge, "local Presidio baseline (review required)"):
         result = ec.run_pipeline(source, SCHEMA, REGISTRY)
-        outputs, private = output_directories(result.audit.dataset_key, output_dir)
-        expected_paths = [
-            outputs / f"cleaned_{result.audit.dataset_key}.csv",
-            outputs / f"mapping_review_{result.audit.dataset_key}.csv",
-            private / f"comments_private_{result.audit.dataset_key}.csv",
-            private / f"distress_review_{result.audit.dataset_key}.csv",
-            private / f"presidio_review_{result.audit.dataset_key}.csv",
-        ]
-        if any(path.resolve() == source for path in expected_paths):
-            raise RedactionError("An output would overwrite the input; choose another output directory.")
-        paths = ec.write_outputs(result, outputs, private)
+        output_directories(result.audit.dataset_key, output_dir)
+        paths = write_stage_outputs(result, output_dir, source)
     return result, paths
 
 
@@ -68,7 +60,7 @@ def main(argv=None):
         # Library errors may include raw responses; keep diagnostics local.
         parser.exit(1, "Pipeline failed during cleaning, validation, or file I/O; no successful output publication. Inspect locally without logging responses.\n")
     summary = result.privacy_summary
-    print(f"Data rows: {len(result.data):,}; columns: {len(result.data.columns)}")
+    print(f"Data rows: {len(result.cleaned_stage):,}; cleaned columns: {len(result.cleaned_stage.columns)}; censored columns: {len(result.censored_stage.columns)}")
     print(f"Checks passed: {int(result.checks['pass'].sum())}/{len(result.checks)}")
     print(f"Comments: {summary['comments']:,}; changed: {summary['changed']:,}; unchanged: {summary['unchanged']:,}; blank: {summary['blank']:,}")
     print(f"Detections: {sum(summary['detections_by_entity_type'].values()):,}; form-language disagreements: {summary['form_language_disagreements']:,}")

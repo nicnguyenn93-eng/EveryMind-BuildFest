@@ -14,8 +14,8 @@ from openpyxl.utils.exceptions import InvalidFileException
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_INPUT = ROOT / "private_data" / "BuildFest_EveryMind_Survey_Data_FULL.xlsx"
-DEFAULT_OUTPUT = ROOT / "private_data" / "censoring" / "survey.csv"
+DEFAULT_INPUT = ROOT / "private_data" / "raw" / "BuildFest_EveryMind_Survey_Data_FULL.xlsx"
+DEFAULT_OUTPUT = ROOT / "private_data" / "raw" / "survey.csv"
 DEFAULT_SHEET = "Survey Data"
 
 
@@ -103,7 +103,7 @@ def main(argv=None):
     parser.add_argument("--input", "-i", type=Path, default=DEFAULT_INPUT,
                         help="Source XLSX workbook (default: private_data survey workbook).")
     parser.add_argument("--output", "-o", type=Path, default=DEFAULT_OUTPUT,
-                        help="Destination CSV (default: private_data/censoring/survey.csv).")
+                        help="Destination CSV (default: private_data/raw/survey.csv).")
     parser.add_argument("--sheet", default=DEFAULT_SHEET,
                         help="Worksheet to export (default: Survey Data).")
     args = parser.parse_args(argv)

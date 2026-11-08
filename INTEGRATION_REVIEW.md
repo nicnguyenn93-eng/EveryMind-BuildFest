@@ -27,7 +27,7 @@ were added. These results are for local review, not an anonymity certification.
   integration validation.
 
 The detailed local verification report is at
-`private_data/censoring/72b08ff71ede/outputs/integration_verification.json`.
+`private_data/archive/previous_censoring/72b08ff71ede/outputs/integration_verification.json`.
 Raw-text reviews are in the same run's `private/` directory and remain Git-ignored.
 
 The code utilities now live in `everymind_censoring/` (renamed from `scripts/`).
@@ -99,3 +99,14 @@ checks block network connections, downloads, and GPU activation.
 
 Final combined run: **46 tests passed**, including both installed-model offline
 checks and John's ten cleaning checks (plus thirteen unittest subtests).
+
+## Stage layout update
+
+The earlier verification above describes the original combined export and is
+retained in the archive. Current runs publish separate raw, cleaned, and censored
+stages under private_data/, with audits and manifests in
+reports/. Cleaned/censored tables have the same schema and differ only in comment
+values. Both retain source-row and original-ID linkage. John's Result.data
+retains its original schema; no separate analysis stage is published.
+See the repository README and the generated
+private_data/README.md for the current paths.

@@ -15,9 +15,11 @@ from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 PRIVATE_DATA = ROOT / "private_data"
+RAW_DATA = PRIVATE_DATA / "raw"
 CENSORING_DATA = PRIVATE_DATA / "censoring"
-DEFAULT_INPUT = CENSORING_DATA / "survey.csv"
-DEFAULT_OUTPUT = CENSORING_DATA / "survey_presidio.csv"
+REPORTS_DATA = PRIVATE_DATA / "reports"
+DEFAULT_INPUT = RAW_DATA / "survey.csv"
+DEFAULT_OUTPUT = CENSORING_DATA / "baseline" / "survey_presidio.csv"
 COMMENT_FIELDS = (
     "What was the most valuable thing you learned during the training?\u00a0",
     "How can we improve this training in the future?",
@@ -282,7 +284,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", "-i", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output", "-o", type=Path, default=DEFAULT_OUTPUT,
-                        help="Destination CSV inside private_data/ (default: private_data/censoring/survey_presidio.csv).")
+                        help="Destination CSV inside private_data/ (default: private_data/censoring/baseline/survey_presidio.csv).")
     args = parser.parse_args(argv)
     # Suppress library diagnostics; decision/error logging can contain input text.
     logging.getLogger("presidio-analyzer").disabled = True

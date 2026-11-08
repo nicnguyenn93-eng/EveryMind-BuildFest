@@ -14,9 +14,9 @@ python -m pip install -r requirements-models.txt
 python -m everymind_cleaning.run_pipeline
 ```
 
-The command reads `private_data/BuildFest_EveryMind_Survey_Data_FULL.xlsx` directly.
-It also supports `--input private_data/censoring/survey.csv` and
-`--output-dir private_data/censoring`. Generated files must stay in `private_data/`.
+The command reads `private_data/raw/BuildFest_EveryMind_Survey_Data_FULL.xlsx` directly.
+It also supports `--input private_data/raw/survey.csv` and
+`--output-dir private_data`. Generated files must stay in `private_data/`.
 Both CPU models must already be installed; runtime never downloads them.
 
 For the optional notebook and analysis dependencies:
@@ -31,33 +31,33 @@ same input and output defaults as the command. Its existing analysis code is
 retained. Saved outputs were cleared so old, disconnected results are not shown
 as current. No translation or LLM suggestion hook is enabled.
 
-## Outputs
+## Stage outputs
 
-Under `private_data/censoring/<dataset-key>/` (source SHA-256 prefix):
+The default data root is `private_data/`. Each run keeps a source-file hash key:
 
-- `outputs/cleaned_<key>.csv`: John's structured/derived data and redacted comments.
-- `outputs/audit_report_<key>.md`: cleaning steps, dropped rows, and quality flags.
-- `outputs/mapping_review_<key>.csv`: unknown labels awaiting human decisions.
-- `outputs/presidio_summary_<key>.json`: counts, language disagreements, and model/package versions; no comment text or matched identifiers.
-- `private/comments_private_<key>.csv`: normalized comments, verbatim `__original` comments, source rows, original IDs, and distress flags.
-- `private/distress_review_<key>.csv`: John's subset for local staff review.
-- `private/presidio_review_<key>.csv`: one record per retained comment field, including blanks and unchanged comments; source/form/selected language, original and normalized input, replacement text, and detections.
+- `raw/`: unmodified workbook/CSV. Inputs outside this folder are copied into `raw/<key>/`.
+- `cleaned/<key>/cleaned_<key>.csv`: standardized fields and normalized, uncensored comments before the privacy tool.
+- `censoring/<key>/censored_<key>.csv`: identical columns and row order; only the comment values change.
+- `reports/<key>/`: cleaning audit, mapping review, private distress-review subset, and a manifest with stage paths, counts, hashes, and linkage columns.
 
-Review offsets refer to **normalized input**, in zero-based Python characters
-with an exclusive end. Normalization changes are counted separately from
-Presidio changes. `source_row` starts at 2 after the header and counts logical
-CSV records, not physical lines in multiline text. Provenance does not affect
-John's duplicate rules and is not included in the cleaned table. The notebook's
-existing analysis CSV and figures also stay under this run's `outputs/` directory.
+Presidio's summary sits beside the censored CSV. Its private/ subfolder contains
+`comments_private_<key>.csv` and `presidio_review_<key>.csv`, including original
+and normalized comments, selected language, redacted text, and detections.
+Offsets refer to normalized input (zero-based Python characters, exclusive end).
+The source-row and ID columns let you compare retained records across stages;
+removed blank/duplicate rows are recorded in the audit. They do not affect deduplication.
 
-All cleaning checks must pass before outputs are published. The output set is
-staged and verified before replacement; ordinary replacement errors restore
-existing files. Sudden process/OS failure during publication is not a multi-file
-atomic transaction. Inputs and existing standalone baseline files are unchanged.
+`private_data/README.md` links to the latest completed run. The notebook uses the
+same publisher. The three-stage command creates no separate analysis export;
+John's existing notebook analysis code and in-memory `Result.data` are retained.
+Earlier mixed-layout results are preserved in `archive/previous_censoring/`.
+Standalone full-CSV Presidio runs use `censoring/baseline/` separately.
 
-All outputs are local review data. `redacted` means processed, not verified
-anonymous. IDs and metadata remain, detections can be wrong, and the private
-files contain original responses. Detection counts do not measure accuracy.
+All checks and staging verification must succeed before publication. Ordinary
+replacement errors restore existing files across folders. Sudden termination
+is not a multi-file atomic transaction. Inputs are never replaced. All stages
+retain local information: uncensored comments remain in raw/cleaned/private files,
+and censored text still needs review. No LLM call is enabled.
 
 ## Python interface
 
@@ -69,7 +69,11 @@ presidio_bridge.connect()
 result = ec.run_pipeline(source, SCHEMA, REGISTRY, filename="export.xlsx")
 result.data, result.private, result.audit, result.checks
 result.privacy_review, result.privacy_summary
+result.cleaned_stage, result.censored_stage
 ```
+
+`ec.write_outputs` remains available for the older combined layout. The CLI
+and notebook use `write_stage_outputs` for the stage folders above.
 
 The original result fields, pipeline arguments, and batch adapter contract are
 retained. `PresidioBridge` loads the shared models once per process. Blank texts
