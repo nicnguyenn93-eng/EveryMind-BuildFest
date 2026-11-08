@@ -1,0 +1,92 @@
+
+<div class="ex">
+  <header class="ex-head" id="top">
+    <h1>988 Survey <span>Explorer</span></h1>
+    <p>Two ways into the same 1,255 post-training survey responses. Click anything to narrow the view; the panel beside it always describes what you have selected.</p>
+    <nav class="ex-tabs" role="tablist" aria-label="Views">
+      <button class="ex-tab" role="tab" id="tab-map" data-tab="map" aria-selected="true">Map of Maryland</button>
+      <button class="ex-tab" role="tab" id="tab-rings" data-tab="rings" aria-selected="false">Who attended</button>
+    </nav>
+    <div class="ex-ribbon" aria-hidden="true"></div>
+  </header>
+
+  <div class="ex-controls">
+    <span class="ex-seglab">Measure</span>
+    <div class="ex-seg" role="group" aria-label="Measure">
+      <button data-param="metric" data-value="nps" aria-pressed="true">Satisfaction</button>
+      <button data-param="metric" data-value="gain_index" aria-pressed="false">Knowledge gained</button>
+      <button data-param="metric" data-value="pct_know_when" aria-pressed="false">Know when to use 988</button>
+      <button data-param="metric" data-value="call_mean" aria-pressed="false">Would call 988</button>
+      <button data-param="metric" data-value="engaged_mean" aria-pressed="false">Presenter engagement</button>
+    </div>
+  </div>
+
+  <!-- ============ MAP ============ -->
+  <section class="ex-page" id="map" data-page="map">
+    <div class="ex-split">
+      <div class="ex-card">
+        <div class="ex-cardhead">
+          <h3 data-draw="maptitle">Where the training has reached</h3>
+          <div class="ex-legend" data-draw="maplegend"></div>
+        </div>
+        <p class="cap muted" data-draw="mapnote">Every Maryland county is drawn. Four have survey responses and can be clicked; the other twenty are grey because the training has not been surveyed there.</p>
+        <div class="ex-viz ex-map" style="min-height:420px" data-draw="map" data-source="cube"></div>
+        <div class="ex-chips" data-draw="countychips" data-source="cube"></div>
+      </div>
+      <div class="ex-card ex-detail" data-draw="mapdetail" data-source="cube"></div>
+    </div>
+    <div class="ex-card" id="map-split">
+      <div class="ex-cardhead">
+        <h3 data-draw="splittitle">Inside the selected area</h3>
+        <div class="ex-seg" role="group" aria-label="Split by">
+          <button data-param="split" data-value="role" aria-pressed="true">By role</button>
+          <button data-param="split" data-value="session" aria-pressed="false">By session</button>
+          <button data-param="split" data-value="quarter" aria-pressed="false">By quarter</button>
+          <button data-param="split" data-value="language" aria-pressed="false">By language</button>
+        </div>
+      </div>
+      <p class="cap muted" data-draw="splitnote">Pick a county on the map, then split it whichever way you like.</p>
+      <div class="ex-viz" style="min-height:200px" data-draw="mapsplit" data-source="cube"></div>
+    </div>
+
+    <div class="ex-card ex-notes">
+      <h3>Reading the map</h3>
+      <ul>
+        <li>Colour shows the measure chosen above; grey means no responses at all.</li>
+        <li>A figure is shown for a group of 30 or more. For 10 to 29 it is marked as a small sample. Below 10 the count is shown but no figure, because a number from so few people misleads and could identify someone.</li>
+        <li>"Would call 988" was only on some versions of the survey, so a large county can still have no figure for it.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ RINGS ============ -->
+  <section class="ex-page" id="rings" data-page="rings" hidden>
+    <div class="ex-controls">
+      <span class="ex-seglab">Rings</span>
+      <div class="ex-seg" role="group" aria-label="Ring order">
+        <button data-param="order" data-value="role" aria-pressed="true">Role → County → Session</button>
+        <button data-param="order" data-value="county" aria-pressed="false">County → Role → Session</button>
+      </div>
+    </div>
+    <div class="ex-split">
+      <div class="ex-card">
+        <div class="ex-cardhead">
+          <h3 id="rings-title">Every response, split and split again</h3>
+          <div class="ex-legend" data-draw="ringlegend"></div>
+        </div>
+        <nav class="ex-crumbs" data-draw="ringcrumbs" aria-label="Current selection"></nav>
+        <p class="cap muted">Each wedge is a group of responses, sized by how many people are in it. Click a wedge to go deeper; click the middle to come back out.</p>
+        <div class="ex-viz" style="min-height:460px" data-draw="rings" data-source="cube"></div>
+      </div>
+      <div class="ex-card ex-detail" data-draw="ringdetail" data-source="cube"></div>
+    </div>
+    <div class="ex-card ex-notes">
+      <h3>Reading the rings</h3>
+      <ul>
+        <li>The middle is everyone. The first ring splits them by the feature you chose above, the second ring splits each of those by the other feature, and the outer ring splits those by training session.</li>
+        <li>A wedge's <b>size</b> is how many people it holds; its <b>colour</b> is the measure chosen above. A striped wedge has fewer than 10 people, so no figure is shown for it.</li>
+        <li>The same groups appear whichever ring order you choose; only the nesting changes.</li>
+      </ul>
+    </div>
+  </section>
+</div>

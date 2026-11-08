@@ -1,0 +1,1142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>988 Training — Findings</title>
+<style>
+/*__FONTS__*/
+
+/* Palette and type follow everymind.org and the 988 Survey Explorer it embeds:
+   Poppins, white ground, teal with green accents. */
+:root {
+  --em-bg:#ffffff; --em-panel:#f8f8f9; --em-card:#ffffff; --em-line:#e3e6e8;
+  --em-ink:#2b2b2b; --em-body:#5f6266; --em-muted:#7a7d81;
+  --em-teal:#28b9b9; --em-teal-ink:#237f80; --em-teal-deep:#1f7576;
+  --em-green:#7dc240; --em-lime:#add020; --em-amber:#d9822b; --em-rose:#c2566b;
+  --em-chart-muted:#c6cbd0; --em-grid:#eceef0;
+  --em-teal-soft:#e6f6f6; --em-green-soft:#eef7e5; --em-amber-soft:#fbf1e6;
+  --em-font:"Poppins","Helvetica Neue",Arial,sans-serif;
+  --gap-xs:.25rem; --gap-sm:.5rem; --gap-md:.875rem; --gap-lg:1.25rem; --gap-xl:2rem;
+  --pad-sm:.5rem; --pad-md:.875rem; --pad-lg:1.25rem; --radius:10px;
+  color-scheme: light;
+}
+* , *::before, *::after { box-sizing: border-box; }
+body { margin:0; background:var(--em-bg); color:var(--em-body); font-family:var(--em-font);
+       font-size:15px; line-height:1.55; -webkit-text-size-adjust:100%; }
+h1,h2,h3,h4 { margin:0; color:var(--em-ink); text-wrap:balance; font-weight:600; }
+p { margin:0; }
+a { color:var(--em-teal-ink); }
+.num { font-variant-numeric:tabular-nums; }
+.muted { color:var(--em-muted); }
+.cap { font-size:.8rem; }
+.wrap { width:100%; max-width:1280px; margin-inline:auto;
+        padding-inline:max(16px, var(--pad-lg)); }
+section { padding-block:var(--gap-xl); }
+.secthead { display:grid; gap:var(--gap-xs); margin-bottom:var(--gap-lg); }
+.secthead h2 { font-size:clamp(1.3rem,2.6vw,1.75rem); }
+.secthead p { max-width:78ch; }
+.kicker { font-size:.75rem; font-weight:600; letter-spacing:.09em; text-transform:uppercase;
+          color:var(--em-teal-ink); }
+
+/* hero */
+.hero { background:var(--em-panel); }
+.hero .wrap { padding-block:var(--gap-xl) 0; display:grid; gap:var(--gap-md); }
+.hero h1 { font-size:clamp(1.8rem,4.2vw,2.6rem); line-height:1.1; }
+.hero h1 span { color:var(--em-teal); }
+.hero p.lede { max-width:76ch; font-size:1.02rem; }
+.hero nav { display:flex; flex-wrap:wrap; gap:var(--gap-xs); }
+.hero nav a { font-size:.85rem; font-weight:600; text-decoration:none; color:var(--em-teal-ink);
+              background:var(--em-teal-soft); padding:.4rem .9rem; border-radius:999px; }
+.hero nav a:hover { background:var(--em-teal-deep); color:#fff; }
+.ribbon { height:8px; margin-top:var(--gap-md);
+          background:linear-gradient(90deg,var(--em-teal) 0 72%,var(--em-green) 72% 88%,var(--em-lime) 88% 100%); }
+
+/* tiles */
+.tiles { display:grid; gap:var(--gap-md); grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }
+.tile { background:var(--em-card); border:1px solid var(--em-line); border-radius:var(--radius);
+        padding:var(--pad-lg); display:grid; gap:.15rem; align-content:start; }
+.tile .v { font-size:clamp(1.6rem,3.4vw,2.1rem); font-weight:600; color:var(--em-teal-ink); line-height:1.1; }
+.tile .l { font-weight:600; color:var(--em-ink); font-size:.95rem; }
+.tile .s { font-size:.8rem; color:var(--em-muted); }
+
+/* insight cards */
+.cards { display:grid; gap:var(--gap-md); grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); }
+.card { background:var(--em-card); border:1px solid var(--em-line); border-radius:var(--radius);
+        padding:var(--pad-lg); display:grid; gap:var(--gap-sm); align-content:start; min-width:0; }
+.card.wide { grid-column:1/-1; }
+.card h3 { font-size:1.05rem; }
+.card .viz { min-width:0; }
+.card .foot { font-size:.8rem; color:var(--em-muted); border-top:1px solid var(--em-line);
+              padding-top:var(--gap-sm); }
+
+/* bar charts, drawn as a grid so no chart library is needed */
+.bars { display:grid; gap:.4rem; }
+.bar { display:grid; grid-template-columns:minmax(84px,30%) minmax(0,1fr) auto; gap:.5rem; align-items:center; }
+.bar .n { font-size:.82rem; color:var(--em-ink); overflow-wrap:anywhere; }
+.bar .track { background:var(--em-grid); border-radius:999px; height:14px; position:relative; overflow:hidden; }
+.bar .fill { position:absolute; inset-block:0; background:var(--em-teal); border-radius:999px; }
+.bar .fill.green { background:var(--em-green); }
+.bar .fill.amber { background:var(--em-amber); }
+.bar .fill.rose  { background:var(--em-rose); }
+.bar .fill.muted { background:var(--em-chart-muted); }
+.bar .v { font-size:.82rem; font-weight:600; color:var(--em-ink); font-variant-numeric:tabular-nums; }
+.bar .track.zero::before { content:""; position:absolute; inset-block:-2px; left:50%; width:1px; background:var(--em-muted); }
+.legend { display:flex; flex-wrap:wrap; gap:var(--gap-md); font-size:.78rem; color:var(--em-muted); }
+.legend span { display:inline-flex; align-items:center; gap:.35rem; }
+.swatch { width:10px; height:10px; border-radius:3px; display:inline-block; }
+
+/* before/after rows */
+.dumb { display:grid; gap:.7rem; }
+.dumb .row { display:grid; grid-template-columns:minmax(120px,34%) minmax(0,1fr) auto; gap:.6rem; align-items:center; }
+.dumb .lane { position:relative; height:18px; }
+.dumb .lane::before { content:""; position:absolute; top:8px; left:0; right:0; height:2px; background:var(--em-grid); }
+.dumb .seg { position:absolute; top:8px; height:2px; background:var(--em-green); }
+.dumb .dot { position:absolute; top:4px; width:11px; height:11px; border-radius:50%; margin-left:-5.5px; }
+.dumb .dot.pre { background:var(--em-chart-muted); }
+.dumb .dot.post { background:var(--em-teal-deep); }
+.dumb .delta { font-size:.82rem; font-weight:600; color:var(--em-green); font-variant-numeric:tabular-nums; }
+
+/* recommendations */
+.recs { display:grid; gap:var(--gap-md); }
+.rec { background:var(--em-card); border:1px solid var(--em-line); border-left:5px solid var(--em-teal);
+       border-radius:var(--radius); padding:var(--pad-lg);
+       display:grid; grid-template-columns:auto minmax(0,1fr); gap:var(--gap-sm) var(--gap-md); align-items:start; }
+.rec .idx { width:2rem; height:2rem; border-radius:50%; background:var(--em-teal-deep); color:#fff;
+            display:grid; place-items:center; font-weight:600; font-size:.95rem; }
+.rec .body { display:grid; gap:var(--gap-sm); min-width:0; }
+.rec h3 { font-size:1.05rem; }
+.rec dl { margin:0; display:grid; gap:.35rem .75rem; grid-template-columns:auto minmax(0,1fr); font-size:.85rem; }
+.rec dt { font-weight:600; color:var(--em-teal-ink); }
+.rec dd { margin:0; }
+.pri { font-size:.7rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+       padding:.2rem .55rem; border-radius:999px; justify-self:start; }
+.pri.now { background:var(--em-teal-soft); color:var(--em-teal-ink); }
+.pri.next { background:var(--em-green-soft); color:#4c7a16; }
+.pri.watch { background:var(--em-amber-soft); color:#8a5213; }
+
+/* explorer frame */
+.explorer { background:var(--em-panel); }
+.frameshell { border:1px solid var(--em-line); border-radius:var(--radius); overflow:hidden;
+              background:var(--em-card); }
+.frameshell iframe { display:block; width:100%; height:min(1500px, 190vh); border:0; }
+.frameshell .bar2 { display:flex; flex-wrap:wrap; gap:var(--gap-sm); justify-content:space-between;
+                    align-items:center; padding:var(--pad-sm) var(--pad-md);
+                    border-bottom:1px solid var(--em-line); background:var(--em-panel); }
+.frameshell .bar2 a { font-size:.82rem; font-weight:600; }
+.notice { background:var(--em-amber-soft); border:1px solid #efd9bd; border-radius:var(--radius);
+          padding:var(--pad-md); font-size:.85rem; margin-bottom:var(--gap-md); }
+
+/* notes + footer */
+.notes { display:grid; gap:var(--gap-sm); }
+.notes ul { margin:0; padding-left:1.1rem; display:grid; gap:.35rem; }
+footer { border-top:1px solid var(--em-line); padding-block:var(--gap-xl); }
+footer .wrap { display:grid; gap:var(--gap-sm); }
+@media (max-width:560px) {
+  .bar { grid-template-columns:minmax(0,1fr) auto; }
+  .bar .track { grid-column:1/-1; }
+  .dumb .row { grid-template-columns:minmax(0,1fr) auto; }
+  .dumb .lane { grid-column:1/-1; }
+}
+
+/* ---------- intake gate ---------- */
+.intake { padding-block:var(--gap-xl); }
+.steps { list-style:none; margin:0; padding:0; display:grid; gap:var(--gap-md); counter-reset:step; }
+.step { background:var(--em-card); border:1px solid var(--em-line); border-radius:var(--radius);
+        padding:var(--pad-lg); display:grid; gap:var(--gap-sm);
+        grid-template-columns:auto minmax(0,1fr); align-items:start; }
+.step > .sn { width:2rem; height:2rem; border-radius:50%; background:var(--em-teal-soft);
+              color:var(--em-teal-ink); display:grid; place-items:center; font-weight:600; font-size:.95rem; }
+.step.done > .sn { background:var(--em-teal-deep); color:#fff; }
+.step > .sbody { display:grid; gap:var(--gap-sm); min-width:0; }
+.step h3 { font-size:1.05rem; }
+.step .hint { font-size:.85rem; color:var(--em-muted); max-width:72ch; }
+
+.drop { border:2px dashed var(--em-line); border-radius:var(--radius); background:var(--em-panel);
+        padding:var(--pad-lg); display:grid; gap:var(--gap-sm); justify-items:start; text-align:left; }
+.drop.over { border-color:var(--em-teal); background:var(--em-teal-soft); }
+.drop.ok { border-style:solid; border-color:var(--em-green); background:var(--em-green-soft); }
+.drop.bad { border-style:solid; border-color:var(--em-amber); background:var(--em-amber-soft); }
+.btn { font:inherit; font-weight:600; font-size:.9rem; border:0; cursor:pointer; border-radius:999px;
+       padding:.55rem 1.1rem; background:var(--em-teal-deep); color:#fff; }
+.btn:hover { background:var(--em-teal-ink); }
+.btn[disabled] { background:var(--em-chart-muted); cursor:not-allowed; }
+.btn.ghost { background:var(--em-teal-soft); color:var(--em-teal-ink); }
+.btn.ghost:hover { background:#d4efef; }
+.btn.link { background:none; color:var(--em-teal-ink); text-decoration:underline; padding:.2rem 0; }
+.btn:focus-visible, .choice:focus-within { outline:2px solid var(--em-teal); outline-offset:2px; }
+.filemeta { display:grid; gap:.25rem; font-size:.85rem; }
+.filemeta dl { margin:0; display:grid; grid-template-columns:auto minmax(0,1fr); gap:.2rem .6rem; }
+.filemeta dt { color:var(--em-muted); } .filemeta dd { margin:0; overflow-wrap:anywhere; }
+.verdict { font-weight:600; }
+.verdict.ok { color:#4c7a16; } .verdict.bad { color:#8a5213; } .verdict.err { color:var(--em-rose); }
+
+.choices { display:grid; gap:var(--gap-sm); grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }
+.choice { position:relative; border:1px solid var(--em-line); border-radius:var(--radius);
+          padding:var(--pad-md); display:grid; gap:.15rem; cursor:pointer; background:var(--em-card); }
+.choice input { position:absolute; opacity:0; pointer-events:none; }
+.choice .t { font-weight:600; color:var(--em-ink); font-size:.95rem; }
+.choice .d { font-size:.8rem; color:var(--em-muted); }
+.choice:hover { border-color:var(--em-teal); }
+.choice:has(input:checked) { border-color:var(--em-teal-deep); background:var(--em-teal-soft);
+                             box-shadow:inset 0 0 0 1px var(--em-teal-deep); }
+.choice:has(input:disabled) { opacity:.5; cursor:not-allowed; }
+.gate { display:flex; flex-wrap:wrap; gap:var(--gap-md); align-items:center; margin-top:var(--gap-md); }
+.gate .btn { padding:.7rem 1.6rem; font-size:1rem; }
+.privacy { background:var(--em-teal-soft); border-radius:var(--radius); padding:var(--pad-md);
+           font-size:.85rem; margin-top:var(--gap-md); }
+
+/* context bar shown once the report is built */
+.ctxbar { position:sticky; top:0; z-index:20; background:var(--em-teal-deep); color:#fff; }
+.ctxbar .wrap { display:flex; flex-wrap:wrap; gap:var(--gap-sm) var(--gap-md); align-items:center;
+                justify-content:space-between; padding-block:.55rem; }
+.ctxbar b { font-weight:600; }
+.ctxbar .pills { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; font-size:.85rem; }
+.ctxbar .pill { background:rgba(255,255,255,.16); border-radius:999px; padding:.15rem .7rem; }
+.ctxbar .btn { background:#fff; color:var(--em-teal-deep); padding:.35rem .9rem; font-size:.82rem; }
+.ctxbar .btn:hover { background:var(--em-teal-soft); }
+
+.scope { font-size:.7rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+         color:var(--em-teal-ink); background:var(--em-teal-soft); border-radius:999px;
+         padding:.18rem .6rem; justify-self:start; }
+.scope.wideview { background:var(--em-panel); color:var(--em-muted); }
+.empty { background:var(--em-panel); border:1px dashed var(--em-line); border-radius:var(--radius);
+         padding:var(--pad-md); font-size:.85rem; color:var(--em-muted); }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker">EveryMind · post-training survey</p>
+    <h1>What the 988 trainings <span>changed</span>, and what to change next</h1>
+    <p class="lede" id="lede"></p>
+    <nav id="topnav" hidden>
+      <a href="#glance">At a glance</a>
+      <a href="#insights">Key insights</a>
+      <a href="#recs">Key recommendations</a>
+      <a href="#map">Interactive map</a>
+      <a href="#method">Method</a>
+    </nav>
+    <div class="ribbon"></div>
+  </div>
+</header>
+
+<!-- ============ STEP 0: the intake gate ============ -->
+<section class="intake" id="intake">
+  <div class="wrap">
+    <div class="secthead">
+      <p class="kicker">Before you start</p>
+      <h2>Set up this report</h2>
+      <p class="muted">Three answers decide what the report says. Your survey export is read in this
+        browser only — it is never uploaded anywhere, and nothing on this page talks to a server.</p>
+    </div>
+
+    <ol class="steps">
+      <li class="step" id="step1">
+        <span class="sn">1</span>
+        <div class="sbody">
+          <h3>Load the survey export</h3>
+          <p class="hint">The original export from the survey tool, <code>.xlsx</code> or <code>.csv</code>.
+            It is checked here against the 20 columns the analysis pipeline expects, so you can see
+            straight away whether a new export will run.</p>
+          <div class="drop" id="drop">
+            <p><b>Drop the export here</b>, or</p>
+            <button class="btn ghost" type="button" id="pick">Choose a file</button>
+            <input type="file" id="file" accept=".csv,.xlsx" hidden>
+            <p class="cap muted">Nothing leaves this browser. Large workbooks take a moment to read.</p>
+          </div>
+          <div id="fileout"></div>
+          <button class="btn link" type="button" id="usedemo">No export to hand? Continue with the prepared dataset</button>
+        </div>
+      </li>
+
+      <li class="step" id="step2">
+        <span class="sn">2</span>
+        <div class="sbody">
+          <h3>Who is this report about?</h3>
+          <p class="hint">The trainings reach two very different audiences, and almost every finding
+            splits along that line.</p>
+          <div class="choices" id="audience-choices"></div>
+        </div>
+      </li>
+
+      <li class="step" id="step3">
+        <span class="sn">3</span>
+        <div class="sbody">
+          <h3>Which jurisdiction?</h3>
+          <p class="hint">Only places with survey responses can be chosen. Groups under 10 responses are
+            never given a figure.</p>
+          <div class="choices" id="county-choices"></div>
+        </div>
+      </li>
+    </ol>
+
+    <div class="gate">
+      <button class="btn" id="build" type="button" disabled>Build the report</button>
+      <p class="cap muted" id="gatehint"></p>
+    </div>
+
+    <p class="privacy"><b>What happens to your file:</b> it is parsed in the page with the browser's own
+      file reader to count rows and check column names. The figures in the report come from the
+      pre-computed aggregate tables built into this page, not from your upload — running the cleaning,
+      redaction and analysis pipeline on a new export is a job for
+      <code>python -m everymind_cleaning.run_pipeline</code>, not for a browser.</p>
+  </div>
+</section>
+
+<!-- ============ THE REPORT ============ -->
+<div id="report" hidden>
+
+<div class="ctxbar">
+  <div class="wrap">
+    <div class="pills" id="ctxpills"></div>
+    <button class="btn" type="button" id="change">Change selection</button>
+  </div>
+</div>
+
+<section id="glance">
+  <div class="wrap">
+    <div class="secthead">
+      <p class="kicker">At a glance</p>
+      <h2 id="glance-title">The analysis set</h2>
+      <p class="muted" id="glance-note"></p>
+    </div>
+    <div class="tiles" id="tiles"></div>
+  </div>
+</section>
+
+<section id="insights" style="background:var(--em-panel)">
+  <div class="wrap">
+    <div class="secthead">
+      <p class="kicker">Key insights</p>
+      <h2 id="insights-title">Six things the responses say</h2>
+      <p class="muted">Ordered by how much they should change what EveryMind does next, not by how large
+        the number is. Each card says which responses it covers; some measures were only collected
+        statewide.</p>
+    </div>
+    <div class="cards" id="insights-cards"></div>
+  </div>
+</section>
+
+<section id="recs">
+  <div class="wrap">
+    <div class="secthead">
+      <p class="kicker">Key recommendations</p>
+      <h2>What to do about it</h2>
+      <p class="muted">Each one names the evidence it rests on, who would own it, and the measure that
+        would show whether it worked. These are drawn from the whole dataset; the ones that bear on your
+        selection are marked.</p>
+    </div>
+    <div class="recs" id="recs-list"></div>
+  </div>
+</section>
+
+<section id="map" class="explorer">
+  <div class="wrap">
+    <div class="secthead">
+      <p class="kicker">Explore it yourself</p>
+      <h2>The survey, county by county</h2>
+      <p class="muted" id="map-note"></p>
+    </div>
+    <div class="notice" id="frame-notice" hidden>
+      The embedded explorer could not load in this frame.
+      <a href="explorer/explorer_standalone.html" target="_blank" rel="noopener">Open it in its own tab instead.</a>
+    </div>
+    <div class="frameshell">
+      <div class="bar2">
+        <span class="cap muted">988 Survey Explorer — interactive map and rings</span>
+        <a href="explorer/explorer_standalone.html" target="_blank" rel="noopener">Open in a new tab ↗</a>
+      </div>
+      <iframe id="explorer-frame" src="explorer/explorer_standalone.html"
+              title="988 Survey Explorer: interactive Maryland map and response rings"
+              loading="lazy"></iframe>
+    </div>
+    <p class="cap muted" style="margin-top:var(--gap-sm)">Coverage: <span id="coverage-line"></span></p>
+  </div>
+</section>
+
+<section id="method">
+  <div class="wrap">
+    <div class="secthead">
+      <p class="kicker">Method and limits</p>
+      <h2>How to read all of this</h2>
+    </div>
+    <div class="cards">
+      <div class="card notes">
+        <h3>What the numbers are</h3>
+        <ul id="method-list"></ul>
+      </div>
+      <div class="card notes">
+        <h3>What they are not</h3>
+        <ul>
+          <li>Not causal. Before-scores are recalled <em>after</em> the training on the same form, so gains include how people now remember their old selves.</li>
+          <li>Not a Maryland-wide picture. Four of 24 jurisdictions have responses, and Anne Arundel students dominate the set.</li>
+          <li>Open-text themes are keyword-coded, so a theme share is a floor, not a prevalence estimate.</li>
+          <li>Responses cluster inside training sessions (ICC ≈ 0.20), so the 95% intervals shown in the explorer are roughly 2.3× too narrow.</li>
+        </ul>
+      </div>
+      <div class="card notes">
+        <h3>Cleaning decisions</h3>
+        <ul id="quality-list"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="cap muted">Built from the EveryMind BuildFest analysis tables (<code>gemini_kit/data/</code>) and the 988 Survey Explorer (<code>frontend/explorer/</code>). Rebuild with <code>python frontend/build_site.py --explorer</code>.</p>
+    <p class="cap muted">Survey responses are de-identified and aggregated. No group smaller than 10 people is given a figure anywhere on this page or in the explorer.</p>
+  </div>
+</footer>
+
+</div>
+<script>
+const DATA = /*__DATA__*/;
+
+/* ============================================================
+   1. Small helpers over the analysis tables
+   ============================================================ */
+const rows = (t) => DATA[t].rows;
+const H = rows('headline')[0];
+const find = (t, pred) => rows(t).find(pred);
+const KN = (item) => find('knowledge', (r) => r.item.startsWith(item));
+const NPS = (group) => find('satisfaction', (r) => r.group === group);
+const KBA = (aud, item) => find('knowledge_by_audience', (r) => r.audience === aud && r.item.startsWith(item));
+const GAP = (g) => find('intent_gap', (r) => r.group === g);
+const DRV = (factor, outcome) => find('drivers', (r) => r.factor === factor && r.outcome === outcome);
+const THEME = (q, th) => find('themes', (r) => r.question === q && r.theme === th);
+const IBOX = (t) => find('improve_box', (r) => r.answer_type === t).n;
+const LANG = (g) => find('language', (r) => r.group === g);
+const CUBE = (county, role) => find('cube', (r) => r.split_dim === 'none' && r.county === county && r.role === role);
+
+const n0 = (x) => Number(x).toLocaleString('en-US');
+const pct = (x, d = 1) => Number(x).toFixed(d) + '%';
+const sgn = (x, d = 1) => (Number(x) > 0 ? '+' : '') + Number(x).toFixed(d);
+const el = (tag, cls, html) => { const e = document.createElement(tag);
+  if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const clear = (id) => { const e = document.getElementById(id); e.replaceChildren(); return e; };
+
+/* ============================================================
+   2. What the reader can choose, and what each choice resolves to
+   ============================================================ */
+const ALL = '(all)';
+const AUDIENCES = {
+  all:     { label: 'All respondents', short: 'Everyone', cubeRole: ALL, sat: 'Everyone',
+             satIn: (c) => c, gap: 'Everyone', kba: null,
+             blurb: 'Every role together — the mix is 83% students.' },
+  student: { label: 'Students', short: 'Students', cubeRole: 'Student', sat: 'Student',
+             satIn: (c) => `${c} · Students`, gap: 'Students', kba: 'Student',
+             blurb: 'School and college audiences, the bulk of the responses.' },
+  adult:   { label: 'Adults', short: 'Adults', cubeRole: null, sat: 'Adults',
+             satIn: (c) => `${c} · Adults`, gap: 'Adults', kba: 'Adult',
+             blurb: 'School staff, caregivers and community members.' },
+};
+const COUNTIES = [{ key: ALL, label: 'All of Maryland', n: rows('md_coverage').reduce((s, r) => s + r.n, 0) }]
+  .concat(rows('md_coverage').filter((r) => r.n > 0).sort((a, b) => b.n - a.n)
+    .map((r) => ({ key: r.county, label: r.county, n: r.n })));
+
+/* Resolve one selection to the figures that exist for it. Returns null when the group
+   is too small to report, which is also how the intake disables a choice. */
+function stats(audKey, county) {
+  const A = AUDIENCES[audKey];
+  const cube = A.cubeRole ? CUBE(county, A.cubeRole) : null;
+  const sat = NPS(county === ALL ? A.sat : A.satIn(county));
+  if (!cube && !sat) return null;
+  const n = (cube && cube.n) || (sat && sat.n) || 0;
+  if (n < 10) return null;
+  const nps = sat && sat.nps != null ? sat : (cube && cube.nps != null ? cube : null);
+  return {
+    n,
+    small: n < 30,
+    sessions: cube ? cube.sessions : null,
+    sat: nps,
+    nps: nps ? nps.nps : null,
+    ci: nps ? [nps.ci_low, nps.ci_high] : null,
+    mean_recommend: nps ? nps.mean_recommend : null,
+    gain_index: (sat && sat.gain_index != null) ? sat.gain_index : (cube ? cube.gain_index : null),
+    pct_know_when: cube ? cube.pct_know_when : null,
+    n_call: cube ? cube.n_call : null,
+    call_mean: cube ? cube.call_mean : null,
+    engaged_mean: cube ? cube.engaged_mean : null,
+    student_pct: cube ? cube.student_pct : null,
+  };
+}
+
+const SEL = { audience: null, county: null, source: null };
+const selLabel = () => {
+  const a = AUDIENCES[SEL.audience].label;
+  const c = SEL.county === ALL ? 'all of Maryland' : SEL.county;
+  return `${a} · ${c}`;
+};
+
+/* ============================================================
+   3. Charts (no library: CSS grid bars)
+   ============================================================ */
+function barChart(host, items, opts = {}) {
+  const max = opts.max != null ? opts.max : Math.max(...items.map((d) => Math.abs(d.value)));
+  const wrap = el('div', 'bars');
+  items.forEach((d) => {
+    const row = el('div', 'bar');
+    row.append(el('span', 'n', d.name));
+    const track = el('div', 'track' + (opts.zero ? ' zero' : ''));
+    const fill = el('div', 'fill' + (d.tone ? ' ' + d.tone : ''));
+    const share = max ? Math.abs(d.value) / max : 0;
+    if (opts.zero) {
+      fill.style.width = (share * 50) + '%';
+      if (d.value < 0) fill.style.right = '50%'; else fill.style.left = '50%';
+    } else {
+      fill.style.left = '0';
+      fill.style.width = (share * 100).toFixed(2) + '%';
+    }
+    track.append(fill);
+    row.append(track, el('span', 'v', d.label));
+    wrap.append(row);
+  });
+  host.append(wrap);
+  if (opts.legend) {
+    const lg = el('div', 'legend');
+    opts.legend.forEach(([tone, text]) => {
+      const s = el('span'); const sw = el('span', 'swatch');
+      sw.style.background = `var(--em-${tone})`; s.append(sw, document.createTextNode(text)); lg.append(s);
+    });
+    host.append(lg);
+  }
+}
+
+function dumbbell(host, items, lo, hi) {
+  const at = (v) => ((v - lo) / (hi - lo)) * 100;
+  const wrap = el('div', 'dumb');
+  items.forEach((d) => {
+    const row = el('div', 'row');
+    row.append(el('span', 'n', d.name));
+    const lane = el('div', 'lane');
+    const seg = el('div', 'seg');
+    seg.style.left = at(Math.min(d.pre, d.post)) + '%';
+    seg.style.width = Math.abs(at(d.post) - at(d.pre)) + '%';
+    const a = el('div', 'dot pre'); a.style.left = at(d.pre) + '%';
+    const b = el('div', 'dot post'); b.style.left = at(d.post) + '%';
+    lane.append(seg, a, b);
+    row.append(lane, el('span', 'delta', sgn(d.post - d.pre, 2)));
+    wrap.append(row);
+  });
+  host.append(wrap);
+  const lg = el('div', 'legend');
+  [['chart-muted', 'before (recalled)'], ['teal-deep', 'after training']].forEach(([tone, text]) => {
+    const s = el('span'); const sw = el('span', 'swatch');
+    sw.style.background = `var(--em-${tone})`; s.append(sw, document.createTextNode(text)); lg.append(s);
+  });
+  host.append(lg);
+  host.append(el('p', 'cap muted', `Scale 1–5, shown from ${lo} to ${hi}.`));
+}
+
+/* ============================================================
+   4. Step 1: read the reader's own export, in this browser only
+   ============================================================ */
+const EXPECTED = /*__EXPECTED__*/;
+
+function splitCsvLine(line) {
+  const out = []; let cur = ''; let q = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (q) {
+      if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+      else if (ch === '"') q = false;
+      else cur += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ',') { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+function readCsv(text) {
+  // rows are counted on newlines outside quotes, so multi-line comments do not inflate the count
+  let q = false, lines = 1, start = 0, headerEnd = -1;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') q = !q;
+    else if (ch === '\n' && !q) { if (headerEnd < 0) headerEnd = i; lines++; }
+  }
+  if (headerEnd < 0) headerEnd = text.length;
+  if (text.endsWith('\n')) lines--;
+  const header = text.slice(start, headerEnd).replace(/\r$/, '');
+  return { columns: splitCsvLine(header).map((s) => s.trim()), dataRows: Math.max(lines - 1, 0) };
+}
+
+/* A minimal .xlsx reader: a workbook is a zip, and the first row of the first sheet is
+   all we need. Uses the browser's own DecompressionStream, so there is no library. */
+async function readXlsx(buf) {
+  const dv = new DataView(buf), u8 = new Uint8Array(buf);
+  let eocd = -1;
+  for (let i = u8.length - 22; i >= 0 && i > u8.length - 66000; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('not a readable .xlsx (no zip directory)');
+  const count = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+  const entries = {};
+  for (let i = 0; i < count; i++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const method = dv.getUint16(p + 10, true);
+    const size = dv.getUint32(p + 20, true);   // compressed size, as stored in the directory
+    const nameLen = dv.getUint16(p + 28, true);
+    const extraLen = dv.getUint16(p + 30, true);
+    const cmtLen = dv.getUint16(p + 32, true);
+    const off = dv.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nameLen));
+    entries[name] = { method, size, off };
+    p += 46 + nameLen + extraLen + cmtLen;
+  }
+  const read = async (name) => {
+    const e = entries[name];
+    if (!e) return '';
+    const nameLen = dv.getUint16(e.off + 26, true), extraLen = dv.getUint16(e.off + 28, true);
+    const start = e.off + 30 + nameLen + extraLen;
+    const raw = u8.subarray(start, start + e.size);
+    if (e.method === 0) return new TextDecoder().decode(raw);
+    if (e.method !== 8) throw new Error('unsupported compression in the workbook');
+    // inflate with the browser's own decompressor, reading the stream by hand so this
+    // works from a file:// page too (where fetch/Response on a stream is blocked)
+    const ds = new DecompressionStream('deflate-raw');
+    const w = ds.writable.getWriter();
+    w.write(raw); w.close();
+    const reader = ds.readable.getReader();
+    const chunks = []; let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value); total += value.length;
+    }
+    const joined = new Uint8Array(total);
+    let at = 0;
+    for (const c of chunks) { joined.set(c, at); at += c.length; }
+    return new TextDecoder().decode(joined);
+  };
+  const sheetName = Object.keys(entries).find((n) => /^xl\/worksheets\/sheet\d*\.xml$/.test(n));
+  if (!sheetName) throw new Error('no worksheet found in the workbook');
+  const [sheet, shared] = await Promise.all([read(sheetName), read('xl/sharedStrings.xml')]);
+  const strs = [...shared.matchAll(/<(?:\w+:)?si\b[^>]*>([\s\S]*?)<\/(?:\w+:)?si>/g)]
+    .map((m) => [...m[1].matchAll(/<(?:\w+:)?t\b[^>]*>([\s\S]*?)<\/(?:\w+:)?t>/g)]
+      .map((t) => t[1]).join(''));
+  const unesc = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(+d)).replace(/&amp;/g, '&');
+  const rowTags = [...sheet.matchAll(/<(?:\w+:)?row\b[^>]*>([\s\S]*?)<\/(?:\w+:)?row>/g)];
+  if (!rowTags.length) throw new Error('the first sheet has no rows');
+  const cells = [...rowTags[0][1].matchAll(/<(?:\w+:)?c\b([^>]*)>([\s\S]*?)<\/(?:\w+:)?c>/g)];
+  const columns = cells.map(([, attrs, inner]) => {
+    const t = (attrs.match(/\bt="([^"]+)"/) || [])[1];
+    const v = (inner.match(/<(?:\w+:)?v\b[^>]*>([\s\S]*?)<\/(?:\w+:)?v>/) || [])[1];
+    if (t === 's') return unesc(strs[+v] || '');
+    if (t === 'inlineStr') return unesc([...inner.matchAll(/<(?:\w+:)?t\b[^>]*>([\s\S]*?)<\/(?:\w+:)?t>/g)].map((m) => m[1]).join(''));
+    return unesc(v || '');
+  }).filter((c) => c !== '');
+  return { columns, dataRows: rowTags.length - 1 };
+}
+
+const norm = (s) => String(s).toLowerCase().replace(/\s+/g, ' ').trim();
+
+async function inspectFile(file) {
+  const out = { name: file.name, size: file.size };
+  const buf = await file.arrayBuffer();
+  if (/\.xlsx$/i.test(file.name)) Object.assign(out, await readXlsx(buf));
+  else Object.assign(out, readCsv(new TextDecoder().decode(buf)));
+  const have = new Set(out.columns.map(norm));
+  const expected = Object.entries(EXPECTED);
+  out.missing = expected.filter(([, label]) => !have.has(norm(label))).map(([k]) => k);
+  out.matched = expected.length - out.missing.length;
+  out.expected = expected.length;
+  if (crypto.subtle) {                       // not available on file:// in some browsers
+    try {
+      const d = await crypto.subtle.digest('SHA-256', buf);
+      out.sha = [...new Uint8Array(d)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) { /* no hash, no problem */ }
+  }
+  return out;
+}
+
+/* ============================================================
+   5. The intake gate
+   ============================================================ */
+const fileOut = document.getElementById('fileout');
+const drop = document.getElementById('drop');
+const buildBtn = document.getElementById('build');
+const gateHint = document.getElementById('gatehint');
+
+function renderChoices() {
+  const ah = clear('audience-choices');
+  Object.entries(AUDIENCES).forEach(([key, a]) => {
+    const lab = el('label', 'choice');
+    const input = el('input');
+    input.type = 'radio'; input.name = 'audience'; input.value = key;
+    input.checked = SEL.audience === key;
+    input.addEventListener('change', () => { SEL.audience = key; renderChoices(); syncGate(); });
+    const st = stats(key, ALL);
+    lab.append(input, el('span', 't', a.label),
+      el('span', 'd', `${a.blurb} ${st ? n0(st.n) + ' responses statewide.' : 'No figures.'}`));
+    ah.append(lab);
+  });
+
+  const ch = clear('county-choices');
+  COUNTIES.forEach((c) => {
+    const st = SEL.audience ? stats(SEL.audience, c.key) : { n: c.n };
+    const lab = el('label', 'choice');
+    const input = el('input');
+    input.type = 'radio'; input.name = 'county'; input.value = c.key;
+    input.disabled = !SEL.audience || !st;
+    if (input.disabled && SEL.county === c.key) SEL.county = null;
+    input.checked = SEL.county === c.key;
+    input.addEventListener('change', () => { SEL.county = c.key; renderChoices(); syncGate(); });
+    let note;
+    if (!SEL.audience) note = 'Choose an audience first.';
+    else if (!st) note = `Fewer than 10 ${AUDIENCES[SEL.audience].short.toLowerCase()} here — no figures.`;
+    else note = `${n0(st.n)} responses${st.small ? ' · small sample' : ''}`;
+    lab.append(input, el('span', 't', c.label), el('span', 'd', note));
+    ch.append(lab);
+  });
+
+  document.getElementById('step2').classList.toggle('done', !!SEL.audience);
+  document.getElementById('step3').classList.toggle('done', !!SEL.county);
+}
+
+function syncGate() {
+  const ready = SEL.source && SEL.audience && SEL.county;
+  buildBtn.disabled = !ready;
+  const want = [!SEL.source && 'load an export (or continue with the prepared dataset)',
+                !SEL.audience && 'choose an audience', !SEL.county && 'choose a jurisdiction']
+    .filter(Boolean);
+  gateHint.textContent = ready
+    ? `Ready: ${selLabel()}.`
+    : 'Still to do: ' + want.join(', ') + '.';
+}
+
+function showFile(info, error) {
+  fileOut.replaceChildren();
+  drop.classList.remove('ok', 'bad');
+  const box = el('div', 'filemeta');
+  if (error) {
+    drop.classList.add('bad');
+    box.append(el('p', 'verdict err', 'Could not read this file'), el('p', 'cap muted', error));
+    box.append(el('p', 'cap muted', 'You can still continue with the prepared dataset below.'));
+    SEL.source = null;
+  } else {
+    const ok = info.missing.length === 0;
+    drop.classList.add(ok ? 'ok' : 'bad');
+    box.append(el('p', 'verdict ' + (ok ? 'ok' : 'bad'),
+      ok ? 'This export has all 20 columns the pipeline expects.'
+         : `Readable, but ${info.missing.length} of ${info.expected} expected columns are missing.`));
+    const dl = el('dl');
+    const add = (k, v) => dl.append(el('dt', null, k), el('dd', null, v));
+    add('File', `${info.name} · ${(info.size / 1024).toFixed(0)} KB`);
+    add('Rows', `${n0(info.dataRows)} data rows, ${n0(info.columns.length)} columns`);
+    add('Expected columns', `${info.matched} of ${info.expected} matched`);
+    if (info.missing.length) add('Missing', info.missing.join(', '));
+    if (info.sha) add('SHA-256', info.sha + '… (computed here, not sent anywhere)');
+    box.append(dl);
+    box.append(el('p', 'cap muted',
+      'The report below is built from the pre-computed aggregate tables, not from this file. '
+      + 'To analyse a new export, run the Python pipeline.'));
+    SEL.source = `${info.name} (${n0(info.dataRows)} rows)`;
+  }
+  fileOut.append(box);
+  document.getElementById('step1').classList.toggle('done', !!SEL.source);
+  syncGate();
+}
+
+async function handleFile(file) {
+  if (!file) return;
+  fileOut.replaceChildren(el('p', 'cap muted', 'Reading ' + file.name + '…'));
+  try { showFile(await inspectFile(file)); }
+  catch (e) { showFile(null, String(e && e.message || e)); }
+}
+
+document.getElementById('pick').addEventListener('click', () => document.getElementById('file').click());
+document.getElementById('file').addEventListener('change', (e) => handleFile(e.target.files[0]));
+['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => {
+  e.preventDefault(); drop.classList.add('over');
+}));
+['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, () => drop.classList.remove('over')));
+drop.addEventListener('drop', (e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); });
+document.getElementById('usedemo').addEventListener('click', () => {
+  drop.classList.remove('ok', 'bad');
+  SEL.source = `the prepared dataset (${n0(H.responses_total)} rows)`;
+  fileOut.replaceChildren(el('p', 'verdict ok', 'Using the prepared dataset'),
+    el('p', 'cap muted', `The cleaned export behind this page: ${n0(H.responses_total)} responses from `
+      + `${H.sessions} sessions, ${n0(H.responses_used)} of them in the analysis set.`));
+  document.getElementById('step1').classList.add('done');
+  syncGate();
+});
+
+document.getElementById('lede').innerHTML =
+  `EveryMind surveyed <b>${n0(H.responses_total)}</b> people after its 988 trainings. `
+  + `<b>${n0(H.responses_used)}</b> responses across <b>${H.sessions}</b> sessions survive cleaning, `
+  + `and <b>${pct(H.pct_students)}</b> of them are students. `
+  + `Tell the page who the report is for, and it will build the findings and recommendations for that group.`;
+
+renderChoices();
+syncGate();
+
+buildBtn.addEventListener('click', () => {
+  renderReport();
+  document.getElementById('intake').hidden = true;
+  document.getElementById('report').hidden = false;
+  document.getElementById('topnav').hidden = false;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+document.getElementById('change').addEventListener('click', () => {
+  document.getElementById('report').hidden = true;
+  document.getElementById('topnav').hidden = true;
+  document.getElementById('intake').hidden = false;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+/* ============================================================
+   6. The report, built for the current selection
+   ============================================================ */
+const covered = rows('md_coverage').filter((r) => r.n > 0);
+const scopeChip = (text, wide) => el('span', 'scope' + (wide ? ' wideview' : ''), text);
+
+function renderReport() {
+  const A = AUDIENCES[SEL.audience];
+  const S = stats(SEL.audience, SEL.county);
+  const where = SEL.county === ALL ? 'all of Maryland' : SEL.county;
+  const inWhere = SEL.county === ALL ? 'statewide' : 'in ' + SEL.county;
+
+  /* ---- context bar ---- */
+  const pills = clear('ctxpills');
+  pills.append(el('b', null, 'This report:'),
+    el('span', 'pill', A.label), el('span', 'pill', where),
+    el('span', 'pill', n0(S.n) + ' responses' + (S.small ? ' · small sample' : '')),
+    el('span', 'pill', SEL.source));
+
+  /* ---- at a glance ---- */
+  document.getElementById('glance-title').textContent = `${A.label} ${inWhere}`;
+  document.getElementById('glance-note').innerHTML =
+    `Every figure is read from the cleaned analysis tables at build time — nothing is typed in by hand. `
+    + (S.small ? '<b>Fewer than 30 responses in this group, so read every figure as indicative.</b> ' : '')
+    + (A.cubeRole ? '' : 'Adults are not broken out in the per-county cube, so session and coverage counts are left blank here. ');
+
+  const tiles = [
+    { v: n0(S.n), l: 'responses in this group',
+      s: SEL.county === ALL ? `of ${n0(H.responses_used)} in the analysis set` : `of ${n0(stats('all', SEL.county).n)} ${inWhere}` },
+    { v: S.sessions != null ? S.sessions : '—', l: 'training sessions',
+      s: S.sessions != null ? `${inWhere}, for this audience` : 'not broken out for this audience' },
+    { v: S.pct_know_when != null ? pct(S.pct_know_when) : '—', l: 'know when to use 988',
+      s: S.pct_know_when != null ? 'agree or strongly agree, after training' : 'not broken out for this audience' },
+    { v: S.gain_index != null ? sgn(S.gain_index, 2) : '—', l: 'knowledge gain index',
+      s: 'mean gain across the three items, 1–5 scale' },
+    { v: S.nps != null ? sgn(S.nps) : '—', l: 'NPS',
+      s: S.ci ? `95% CI ${sgn(S.ci[0])} to ${sgn(S.ci[1])}` : 'too few responses for a figure' },
+    { v: S.n_call != null ? pct(S.n_call / S.n * 100) : '—', l: 'were asked if they would call',
+      s: S.n_call != null ? `${n0(S.n_call)} people saw the item` : 'not broken out for this audience' },
+  ];
+  const tilesHost = clear('tiles');
+  tiles.forEach((t) => {
+    const c = el('div', 'tile');
+    c.append(el('div', 'v num', String(t.v)), el('div', 'l', t.l), el('div', 's', t.s));
+    tilesHost.append(c);
+  });
+
+  /* ---- key insights ---- */
+  const knowRows = A.kba
+    ? rows('knowledge_by_audience').filter((r) => r.audience === A.kba)
+    : rows('knowledge');
+  const know = (item) => knowRows.find((r) => r.item.startsWith(item));
+  const describe = know('Describe 988');
+  const otherAud = SEL.audience === 'adult' ? 'Student' : 'Adult';
+  const otherDescribe = KBA(otherAud, 'Describe 988');
+
+  /* the roles that can be shown for the chosen jurisdiction */
+  const roleRows = [];
+  const adultSat = NPS(SEL.county === ALL ? 'Adults' : `${SEL.county} · Adults`);
+  if (adultSat) roleRows.push({ name: 'Adults (all non-student roles)', n: adultSat.n, nps: adultSat.nps });
+  rows('cube').filter((r) => r.split_dim === 'none' && r.county === SEL.county
+      && r.role !== ALL && r.n >= 10 && r.nps != null)
+    .sort((a, b) => b.n - a.n)
+    .forEach((r) => roleRows.push({ name: r.role, n: r.n, nps: r.nps }));
+
+  const studentHere = CUBE(SEL.county, 'Student');
+  const insights = [
+    {
+      kicker: 'What worked',
+      scope: [`${A.label} · statewide`, SEL.county !== ALL],
+      title: 'Training moves knowledge of 988 itself, hardest on the thing people knew least',
+      text: `For ${A.label.toLowerCase()}, "describe 988 and how it works" gained <b>${sgn(describe.gain, 2)}</b> points on a 1–5 scale, `
+        + `the largest move of the three items; recognising mental health challenges moved least `
+        + `(${sgn(know('Identify mental').gain, 2)}), because most people could already do it. `
+        + (A.kba
+          ? `${otherAud === 'Adult' ? 'Adults' : 'Students'} gained ${sgn(otherDescribe.gain, 2)} on the same item, so `
+            + `${describe.gain > otherDescribe.gain ? 'this group gains more' : 'this group gains less'} from the 988 content itself. `
+          : `Across everyone, <b>${pct(KN('Describe 988').newly_confident_pct)}</b> went from not confident to confident on describing 988. `)
+        + `The curriculum is adding what is missing rather than repeating what the room already has.`,
+      chart: (h) => dumbbell(h, knowRows.map((r) => ({ name: r.item, pre: r.pre_mean, post: r.post_mean })), 2.5, 5),
+      foot: `Both scores are given after the training, the "before" one from recall. n = ${n0(knowRows[0].n)}. `
+        + `The knowledge items are not broken out by county.`,
+    },
+    {
+      kicker: 'The split that matters',
+      scope: [`All respondents · ${where}`, SEL.audience !== 'all'],
+      title: 'Satisfaction is about audience, not place',
+      text: (adultSat && studentHere && studentHere.nps != null
+        ? `${SEL.county === ALL ? 'Statewide' : 'In ' + SEL.county}, adults rate the training at NPS <b>${sgn(adultSat.nps)}</b> `
+          + `and students at <b>${sgn(studentHere.nps)}</b>. `
+        : `${SEL.county === ALL ? 'Statewide' : 'In ' + SEL.county}, the roles with enough responses to report are shown below. `)
+        + `The same split holds everywhere it can be measured: adults ${sgn(NPS('Adults').nps)} against students ${sgn(NPS('Student').nps)} statewide, `
+        + `and inside Anne Arundel ${sgn(NPS('Anne Arundel · Adults').nps)} against ${sgn(NPS('Anne Arundel · Students').nps)}. `
+        + `A county looks bad or good mostly according to how many of its respondents were students. `
+        + `One training is being delivered to two audiences that receive it very differently.`,
+      chart: (h) => {
+        if (!roleRows.length) { h.append(el('p', 'empty', 'No role has 10 or more responses here, so no figure can be shown.')); return; }
+        barChart(h, roleRows.map((r) => ({ name: `${r.name} (n=${n0(r.n)})`, value: r.nps,
+          label: sgn(r.nps, 1), tone: r.nps < 0 ? 'rose' : 'green' })),
+          { zero: true, max: 100, legend: [['green', 'positive NPS'], ['rose', 'negative NPS']] });
+      },
+      foot: 'NPS = % rating 9–10 minus % rating 0–6 on "would recommend". Zero line in the middle. '
+        + 'Roles under 10 responses are left out.',
+    },
+    {
+      kicker: 'The gap to act on',
+      scope: [`${A.label} · statewide`, SEL.county !== ALL],
+      title: 'Knowing when to call and being willing to call are not the same thing',
+      text: `Among ${GAP(A.gap) ? A.label.toLowerCase() : 'respondents'} who agree they know when to use 988, `
+        + `only <b>${pct(GAP(A.gap).high_pct)}</b> say they are likely to call it (9–10 out of 10), and `
+        + `<b>${pct(GAP(A.gap).low_pct)}</b> say they are unlikely. `
+        + `The split by audience is stark: ${pct(GAP('Students').high_pct)} of students against `
+        + `${pct(GAP('Adults').high_pct)} of adults. `
+        + `Knowledge is not the binding constraint for young people — trust, and not knowing what happens on the call, is.`,
+      chart: (h) => {
+        const show = SEL.audience === 'all' ? ['Students', 'Adults'] : [A.gap];
+        show.forEach((g) => {
+          const r = GAP(g);
+          h.append(el('p', 'cap', `<b>${g}</b> who know when to use 988 (n=${n0(r.n_know_when)})`));
+          barChart(h, [
+            { name: 'Likely (9–10)', value: r.high_pct, label: pct(r.high_pct, 0), tone: 'green' },
+            { name: 'Maybe (7–8)', value: r.mid_pct, label: pct(r.mid_pct, 0), tone: 'amber' },
+            { name: 'Unlikely (0–6)', value: r.low_pct, label: pct(r.low_pct, 0), tone: 'rose' },
+          ], { max: 100 });
+        });
+      },
+      foot: `Asked of the ${pct(H.pct_call_item_asked)} of respondents whose form carried the call item (${n0(GAP('Everyone').n_asked)} people). Not broken out by county.`,
+    },
+    {
+      kicker: 'The lever',
+      scope: ['All respondents · statewide', true],
+      title: 'How the presenter performs predicts willingness to call',
+      text: `Of everything measured, "the presenter engaged the participants" correlates most strongly with likelihood to call 988 `
+        + `(Spearman <b>${DRV('Presenter engaged participants', 'Likelihood to call 988').spearman.toFixed(2)}</b>), ahead of organisation `
+        + `(${DRV('Training was well organized', 'Likelihood to call 988').spearman.toFixed(2)}) and subject mastery `
+        + `(${DRV('Presenter knew the subject', 'Likelihood to call 988').spearman.toFixed(2)}). `
+        + `Knowledge <em>gained</em> barely predicts it (${DRV('Knowledge gained', 'Likelihood to call 988').spearman.toFixed(2)}), and prior knowledge not at all `
+        + `(${DRV('Knowledge before training', 'Likelihood to call 988').spearman.toFixed(2)}). `
+        + `Mean likelihood to call runs from ${find('engagement', (r) => r.engaged_level === 3).mean_call} where engagement was rated neutral `
+        + `to ${find('engagement', (r) => r.engaged_level === 5).mean_call} where it was rated strongly agree.`
+        + (S.engaged_mean != null ? ` This group rates engagement at ${S.engaged_mean} out of 5.` : ''),
+      chart: (h) => barChart(h, rows('drivers')
+        .filter((r) => r.outcome === 'Likelihood to call 988')
+        .sort((a, b) => b.spearman - a.spearman)
+        .map((r) => ({ name: r.factor, value: r.spearman, label: r.spearman.toFixed(2),
+                       tone: r.spearman >= 0.3 ? 'teal' : r.spearman >= 0.15 ? 'green' : 'muted' })),
+        { max: 0.5 }),
+      foot: 'Spearman rank correlation, so it is association and not proof of cause. Delivery items were on most forms; the call item on few.',
+    },
+    {
+      kicker: 'Unspent demand',
+      scope: ['All respondents · statewide', true],
+      title: 'People use the suggestion box to ask questions nobody answers',
+      text: `Of ${n0(IBOX('Asked a question') + IBOX('Gave a suggestion or comment'))} real answers in the "how can we improve" box, `
+        + `<b>${n0(IBOX('Asked a question'))}</b> are questions rather than suggestions. `
+        + `Nearly two in five of those ask either about the scale of the problem `
+        + `(${pct(THEME('Questions asked in the improve box', 'Scale and statistics').pct)}) or about how a call actually works and what happens next `
+        + `(${pct(THEME('Questions asked in the improve box', 'How a call works and what happens next').pct)}), and another `
+        + `${pct(THEME('Questions asked in the improve box', 'Who answers and how they are trained').pct)} ask who picks up the phone. `
+        + `Among actual suggestions, the top asks are more interaction `
+        + `(${pct(THEME('Suggestions to improve', 'More interactive and engaging').pct, 0)}) and reaching more people `
+        + `(${pct(THEME('Suggestions to improve', 'Reach more people').pct, 0)}), and `
+        + `${pct(THEME('Suggestions to improve', 'Praise; no change needed').pct, 0)} say nothing needs changing.`,
+      chart: (h) => {
+        h.append(el('p', 'cap', '<b>Questions asked in the box</b>, by topic'));
+        barChart(h, rows('themes')
+          .filter((r) => r.question === 'Questions asked in the improve box' && r.theme !== 'Not matched by keywords')
+          .sort((a, b) => b.pct - a.pct)
+          .map((r) => ({ name: r.theme, value: r.pct, label: pct(r.pct, 0), tone: 'teal' })), { max: 25 });
+        h.append(el('p', 'cap', '<b>Suggestions</b>, by topic'));
+        barChart(h, rows('themes')
+          .filter((r) => r.question === 'Suggestions to improve' && r.theme !== 'Not matched by keywords')
+          .sort((a, b) => b.pct - a.pct).slice(0, 6)
+          .map((r) => ({ name: r.theme, value: r.pct, label: pct(r.pct, 0),
+                         tone: r.theme.startsWith('Praise') ? 'muted' : 'green' })), { max: 30 });
+      },
+      foot: `${n0(IBOX('Left blank'))} left the box blank and ${n0(IBOX('Non-answer ("nothing", "idk")'))} wrote a non-answer. Themes are keyword-coded, so shares are floors.`,
+    },
+    {
+      kicker: 'Watch items',
+      scope: ['All respondents · statewide', true],
+      title: 'As the audience shifts to students, the headline numbers drift down',
+      text: `Quarter by quarter the student share rose from ${pct(rows('trend')[0].student_pct)} to ${pct(rows('trend').at(-1).student_pct)}, `
+        + `and overall NPS fell from ${sgn(rows('trend')[0].nps, 1)} to ${sgn(rows('trend').at(-1).nps, 1)} while the knowledge gain index fell from `
+        + `${rows('trend')[0].gain_index.toFixed(2)} to ${rows('trend').at(-1).gain_index.toFixed(2)}. `
+        + `Students also arrive knowing more than they used to (recalled before-score ${rows('trend')[2].pre_students} → ${rows('trend').at(-1).pre_students}), `
+        + `so there is less headroom to gain. `
+        + `Separately, ${pct(LANG('Spanish speakers').english_form_pct)} of the ${n0(LANG('Spanish speakers').n)} Spanish speakers answered on the English form, `
+        + `and they are ${(LANG('Spanish speakers').scale_confusion_pct / LANG('Everyone else').scale_confusion_pct).toFixed(1)}× as likely to give `
+        + `self-contradictory scale answers (${pct(LANG('Spanish speakers').scale_confusion_pct)} vs ${pct(LANG('Everyone else').scale_confusion_pct)}).`,
+      chart: (h) => {
+        h.append(el('p', 'cap', '<b>Student share of respondents</b>, by training quarter'));
+        barChart(h, rows('trend').map((r) => ({ name: `${r.quarter} (n=${n0(r.n)})`, value: r.student_pct,
+          label: pct(r.student_pct, 0), tone: 'muted' })), { max: 100 });
+        h.append(el('p', 'cap', '<b>Overall NPS</b>, same quarters'));
+        barChart(h, rows('trend').map((r) => ({ name: r.quarter, value: r.nps, label: sgn(r.nps, 1),
+          tone: r.nps < 0 ? 'rose' : 'green' })), { zero: true, max: 100 });
+      },
+      foot: 'A drift in who is being trained, not evidence that the training got worse. Compare like with like in the explorer below.',
+    },
+  ];
+
+  const icards = clear('insights-cards');
+  document.getElementById('insights-title').textContent =
+    `Six things the ${n0(S.n)} ${A.label.toLowerCase()} ${SEL.county === ALL ? '' : inWhere + ' '}tell you`;
+  insights.forEach((ins, i) => {
+    const c = el('div', 'card' + (i === 0 || i >= insights.length - 2 ? ' wide' : ''));
+    c.append(el('p', 'kicker', ins.kicker));
+    c.append(scopeChip(ins.scope[0], ins.scope[1]));
+    c.append(el('h3', null, ins.title), el('p', null, ins.text));
+    const viz = el('div', 'viz');
+    c.append(viz);
+    ins.chart(viz);
+    c.append(el('p', 'foot', ins.foot));
+    icards.append(c);
+  });
+
+  /* ---- key recommendations ---- */
+  const recs = [
+    {
+      pri: ['now', 'Do now'], hits: () => true,
+      title: 'Split the curriculum: one version for students, one for adults',
+      what: 'Keep the adult session as it is. Rebuild the student session around the same content with student framing, student examples and student pacing, and track it as a separate programme.',
+      why: `Adults rate the training at NPS ${sgn(NPS('Adults').nps)} and students at ${sgn(NPS('Student').nps)} — a gap of ${Math.round(NPS('Adults').nps - NPS('Student').nps)} points that holds inside every county with both groups. Adults also gain more on describing 988 (${sgn(KBA('Adult', 'Describe 988').gain, 2)} vs ${sgn(KBA('Student', 'Describe 988').gain, 2)}) and on knowing when to use it (${sgn(KBA('Adult', 'Know when').gain, 2)} vs ${sgn(KBA('Student', 'Know when').gain, 2)}).`,
+      owner: 'Training lead, with the school partnerships contact',
+      measure: 'Student NPS and student knowledge gain, reported separately from adults at every session from now on.',
+    },
+    {
+      pri: ['now', 'Do now'], hits: () => SEL.audience !== 'adult',
+      title: 'Build the student session around interaction, and brief presenters on it',
+      what: 'Replace lecture segments with scenario work, polling and practice. Give presenters a short briefing on the specific engagement behaviours, and keep the engagement item on every form so it can be tracked per presenter.',
+      why: `Presenter engagement is the strongest measured correlate of willingness to call 988 (ρ = ${DRV('Presenter engaged participants', 'Likelihood to call 988').spearman.toFixed(2)}, n = ${DRV('Presenter engaged participants', 'Likelihood to call 988').n}), stronger than how much knowledge was gained (ρ = ${DRV('Knowledge gained', 'Likelihood to call 988').spearman.toFixed(2)}). Mean likelihood to call rises from ${find('engagement', (r) => r.engaged_level === 3).mean_call} to ${find('engagement', (r) => r.engaged_level === 5).mean_call} across engagement ratings, and "more interactive and engaging" is the top suggestion that asks for a change (${pct(THEME('Suggestions to improve', 'More interactive and engaging').pct, 0)} of suggestions).`,
+      owner: 'Training lead',
+      measure: 'Share rating "strongly agree" on presenter engagement, and mean likelihood to call, per session.',
+    },
+    {
+      pri: ['now', 'Do now'], hits: () => SEL.audience !== 'adult',
+      title: 'Add five minutes on what actually happens when you call 988',
+      what: 'Walk through the call end to end: who answers, what they ask, what confidentiality means, when police are and are not involved, and what happens afterwards. Then answer it again on a one-page handout people keep.',
+      why: `This is what people ask unprompted. ${pct(THEME('Questions asked in the improve box', 'How a call works and what happens next').pct, 0)} of the ${n0(IBOX('Asked a question'))} questions in the improvement box are about how a call works and what follows, and ${pct(THEME('Questions asked in the improve box', 'Who answers and how they are trained').pct, 0)} ask who answers and how they are trained. It is also the plausible fix for the intent gap: only ${pct(GAP('Students').high_pct)} of students who know when to use 988 say they would call.`,
+      owner: 'Curriculum owner, with 988 centre liaison for accuracy',
+      measure: `Share of students rating 9–10 on likelihood to call 988 (now ${pct(GAP('Students').high_pct)}), and the share of improve-box answers still asking how a call works.`,
+    },
+    {
+      pri: ['next', 'Next cycle'], hits: () => S.n_call == null || S.n_call / S.n < 0.5,
+      title: 'Put the call-988 item on every form',
+      what: 'Add the willingness-to-call question to the standard form, alongside the three knowledge items, and keep the presenter items there too.',
+      why: `The behaviour EveryMind cares about is barely measured: only ${pct(H.pct_call_item_asked)} of respondents were asked whether they would call (${n0(H.call_item_answered)} people out of ${n0(H.responses_total)}), so it cannot be broken out by county or session without falling under the 10-response floor. Knowledge items, by contrast, were on 100% of forms.`,
+      owner: 'Evaluation owner',
+      measure: 'Share of forms carrying the call item — target 100% — and a per-county figure that clears the 30-response threshold.',
+    },
+    {
+      pri: ['next', 'Next cycle'], hits: () => true,
+      title: 'Give Spanish speakers the Spanish form by default, and fix the reversed item',
+      what: 'Default to the Spanish form wherever the session is advertised in Spanish, and rewrite the knowledge items so the before/after pair cannot be read backwards. Review the flagged responses by hand.',
+      why: `${pct(LANG('Spanish speakers').english_form_pct)} of the ${n0(LANG('Spanish speakers').n)} identified Spanish speakers answered on the English form. They give self-contradictory scale answers at ${pct(LANG('Spanish speakers').scale_confusion_pct)} against ${pct(LANG('Everyone else').scale_confusion_pct)} for everyone else — a form problem, not a knowledge one. Their actual gain (${LANG('Spanish speakers').gain_index.toFixed(2)}) matches everyone else's (${LANG('Everyone else').gain_index.toFixed(2)}).`,
+      owner: 'Survey owner, with the bilingual facilitator',
+      measure: 'Scale-confusion flag rate for Spanish speakers, and share receiving the Spanish form.',
+    },
+    {
+      pri: ['watch', 'Watch'], hits: () => SEL.audience === 'all',
+      title: 'Judge the programme on like-for-like groups, not the headline',
+      what: 'Report NPS and knowledge gain by audience every quarter, and treat the overall figure as a mix statistic. Set separate targets for students and adults.',
+      why: `The headline is drifting because the audience is changing: student share went ${pct(rows('trend')[0].student_pct, 0)} → ${pct(rows('trend').at(-1).student_pct, 0)} across quarters while overall NPS went ${sgn(rows('trend')[0].nps, 1)} → ${sgn(rows('trend').at(-1).nps, 1)}. Student NPS over the same period moved only ${sgn(rows('trend')[2].nps_students, 1)} → ${sgn(rows('trend').at(-1).nps_students, 1)}. Reading the headline as decline would mean fixing a problem that is not there and missing the one that is.`,
+      owner: 'Executive director and evaluation owner',
+      measure: 'Audience-adjusted NPS and gain index reported each quarter, with the mix shown alongside.',
+    },
+    {
+      pri: ['watch', 'Watch'], hits: () => SEL.county === ALL,
+      title: 'Expand reach deliberately, and survey where you expand',
+      what: 'Target the jurisdictions with no responses at all, and carry the same form into them so coverage and outcomes can be compared.',
+      why: `${covered.length} of ${rows('md_coverage').length} Maryland jurisdictions have any responses, and ${pct(NPS('Anne Arundel').n / NPS('Everyone').n * 100, 0)} of all responses come from Anne Arundel alone. "Reach more people" is also the joint-top suggestion from respondents (${pct(THEME('Suggestions to improve', 'Reach more people').pct, 0)} of suggestions).`,
+      owner: 'Outreach lead',
+      measure: 'Number of jurisdictions with 30 or more responses — now ' + rows('md_coverage').filter((r) => r.n >= 30).length + '.',
+    },
+  ];
+
+  const recHost = clear('recs-list');
+  recs.forEach((r, i) => {
+    const c = el('div', 'rec');
+    c.append(el('div', 'idx', String(i + 1)));
+    const body = el('div', 'body');
+    const tags = el('div', 'legend');
+    tags.append(el('span', 'pri ' + r.pri[0], r.pri[1]));
+    if (r.hits()) tags.append(el('span', 'scope', 'bears on ' + selLabel()));
+    body.append(tags, el('h3', null, r.title), el('p', null, r.what));
+    const dl = el('dl');
+    [['Evidence', r.why], ['Owner', r.owner], ['How we would know', r.measure]].forEach(([k, v]) => {
+      dl.append(el('dt', null, k), el('dd', null, v));
+    });
+    body.append(dl);
+    c.append(body);
+    recHost.append(c);
+  });
+
+  /* ---- method ---- */
+  const ml = clear('method-list');
+  [
+    `<b>Who answered.</b> ${n0(H.responses_total)} responses from ${H.sessions} sessions between ${H.first_training} and ${H.last_training}; ${n0(H.responses_used)} are in the analysis set and ${pct(H.pct_students)} of those are students.`,
+    `<b>This selection.</b> ${A.label} ${inWhere}: ${n0(S.n)} responses${S.sessions != null ? ' across ' + S.sessions + ' sessions' : ''}.`,
+    `<b>Knowledge items.</b> Three 1–5 agreement items, each asked for before and after, both answered after the session. "Newly confident" means 3 or below before and 4 or above after.`,
+    `<b>Satisfaction.</b> NPS on the 0–10 "would recommend" item, with 95% bootstrap intervals.`,
+    `<b>Small groups.</b> 30 or more responses: shown normally. 10–29: marked as a small sample. Under 10: no figure at all — those selections are disabled on the setup screen.`,
+    `<b>Robustness.</b> Every headline finding was recomputed on all rows, the recommended set and a strict set; the three agree (see <code>gemini_kit/data/robustness.csv</code>).`,
+  ].forEach((t) => ml.append(el('li', null, t)));
+
+  const ql = clear('quality-list');
+  rows('quality').forEach((r) => ql.append(el('li', null,
+    `<b>${r.decision}:</b> ${r.flag.toLowerCase()} — ${n0(r.n)} response${r.n === 1 ? '' : 's'}.`)));
+
+  /* ---- coverage line and the embedded explorer ---- */
+  document.getElementById('coverage-line').textContent =
+    `${covered.length} of ${rows('md_coverage').length} Maryland jurisdictions have responses — `
+    + covered.slice().sort((a, b) => b.n - a.n).map((r) => `${r.county} ${n0(r.n)}`).join(', ')
+    + `. The other ${rows('md_coverage').length - covered.length} are drawn grey on the map.`;
+  document.getElementById('map-note').textContent =
+    `The 988 Survey Explorer is embedded below, opened on your selection where it can be. `
+    + `Pick a measure, click a Maryland county to zoom into it, then split that county by role, session, `
+    + `quarter or language. The second tab breaks every response down by role, county and session as nested rings.`;
+  syncExplorer();
+}
+
+/* Nudge the embedded explorer to the same selection. Same-origin only; if the browser
+   blocks it (some file:// setups do), the explorer just opens on its default view. */
+function syncExplorer() {
+  const frame = document.getElementById('explorer-frame');
+  const apply = () => {
+    try {
+      const EX = frame.contentWindow && frame.contentWindow.EX;
+      if (!EX) return false;
+      EX.set({ mcounty: SEL.county, mrole: AUDIENCES[SEL.audience].cubeRole || ALL });
+      return true;
+    } catch (e) { return false; }
+  };
+  if (!apply()) {
+    let tries = 0;
+    const t = setInterval(() => { if (apply() || ++tries > 20) clearInterval(t); }, 400);
+  }
+}
+
+const frame = document.getElementById('explorer-frame');
+let loaded = false;
+frame.addEventListener('load', () => { loaded = true; syncExplorer(); });
+frame.addEventListener('error', () => { document.getElementById('frame-notice').hidden = false; });
+setTimeout(() => { if (!loaded) document.getElementById('frame-notice').hidden = false; }, 8000);
+</script>
+</body>
+</html>

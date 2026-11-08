@@ -7,8 +7,12 @@ full-CSV Presidio baseline remain available for comparison. No LLM is called by
 the integrated command.
 
 The published workflow consists of command-line tools and the analysis notebook.
-The earlier Streamlit mock UI and placeholder report/PDF modules are removed;
-a frontend can be connected to the processed analysis outputs separately.
+The earlier Streamlit mock UI and placeholder report/PDF modules are removed.
+The frontend lives in [`frontend/`](frontend/README.md): a single built page of key
+insights and recommendations, with the interactive 988 Survey Explorer map embedded
+below them. It reads the analysis tables in `gemini_kit/data/` at build time, so it is
+static, offline, and contains no response-level data. Open `frontend/index.html`, or
+rebuild it with `python frontend/build_site.py`.
 
 Code is organized into `everymind_cleaning/` (John's primary pipeline) and
 `everymind_censoring/` (our import and Presidio utilities). Data is kept in
