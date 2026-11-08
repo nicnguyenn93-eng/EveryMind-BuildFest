@@ -1,32 +1,30 @@
-.env
+# Real survey inputs, outputs, and review material stay local.
+private_data/
 uploads/
 private_review_files/
-__pycache__/
-.pytest_cache/
+review_files/
+*Survey_Data*.xlsx
+*Survey_Data*.csv
 
-# Local Python environments
-venv/
+# Local environments, downloaded models, and caches.
 .venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.cache/
+model_cache/
+models/
+.k3-build/
+node_modules/
+*.inspect.ndjson
+gemini_kit/results/
 
-# Credentials and local Streamlit configuration
+# Credentials and local configuration.
+.env
 .env.*
 !.env.example
 .streamlit/secrets.toml
 *.pem
 *.key
-
-# Private survey inputs and review materials (keep synthetic fixtures explicit)
-private_data/
-review_files/
-*Survey_Data*.xlsx
-*Survey_Data*.csv
-
-# Downloaded models and local caches
-.cache/
-model_cache/
-models/
-*.pyc
-.k3-build/
-node_modules/
-*.inspect.ndjson
-gemini_kit/results/
+.DS_Store

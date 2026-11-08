@@ -1,5 +1,5 @@
 """
-privacy_adapter.py - stub that hands free text to the team's privacy tool.
+privacy_adapter.py - batch boundary for the team's privacy tool.
 
 The privacy tool (Presidio-based) is owned by another teammate. This file is
 the only place the cleaning pipeline touches it, so swapping in the real tool
@@ -11,9 +11,9 @@ Contract the privacy tool must satisfy
     redact(texts: list[str], languages: list[str]) -> list[str]
 
     * same length and order as `texts`
-    * `languages[i]` is "en", "es" or "unknown" for texts[i]
+    * `languages[i]` is "en", "es", "unknown", or "none" for blank texts
     * empty strings come back as empty strings
-    * returned text contains no personal identifiers
+    * redaction is best effort; output still requires local review
 
 How to connect it (pick one)
 ----------------------------
@@ -31,6 +31,7 @@ Until a tool is connected, is_connected() is False and the pipeline:
 from __future__ import annotations
 
 import importlib
+from contextlib import contextmanager
 from typing import Callable, Optional
 
 # Optional "module:function" path, e.g. "privacy_tool:redact". Leave None to use connect().
@@ -54,6 +55,30 @@ def disconnect() -> None:
     _redact_fn, _tool_name = None, "not connected"
 
 
+@contextmanager
+def using(fn=None, name=None):
+    """Temporarily replace the adapter, restoring it even when a check fails."""
+    global _redact_fn, _tool_name, PRIVACY_TOOL_IMPORT
+    previous = (_redact_fn, _tool_name, PRIVACY_TOOL_IMPORT)
+    PRIVACY_TOOL_IMPORT = None
+    disconnect()
+    if fn is not None:
+        connect(fn, name)
+    try:
+        yield
+    finally:
+        _redact_fn, _tool_name, PRIVACY_TOOL_IMPORT = previous
+
+
+def review_details():
+    """Optional per-item detections from the most recent batch."""
+    return getattr(_redact_fn, "last_review", None)
+
+
+def versions():
+    return getattr(_redact_fn, "versions", {})
+
+
 def _try_import() -> None:
     if _redact_fn is None and PRIVACY_TOOL_IMPORT:
         module_name, fn_name = PRIVACY_TOOL_IMPORT.split(":")
@@ -72,6 +97,8 @@ def tool_name() -> str:
 
 def redact_texts(texts: list, languages: list) -> Optional[list]:
     """Return redacted texts, or None if no privacy tool is connected."""
+    if len(texts) != len(languages):
+        raise ValueError("Privacy tool requires one language per text")
     if not is_connected():
         return None
     out = _redact_fn(list(texts), list(languages))
