@@ -1,9 +1,10 @@
 # John's cleaner with Presidio: integrated baseline
 
-Run date: 2026-11-07. John's `everymind_cleaning` package is the primary workflow;
-the existing local Presidio engine is connected through its batch adapter. No
-new detection rules, allowlists, language algorithm, translation, or LLM call
-were added. These results are for local review, not an anonymity certification.
+Original integration run date: 2026-11-07. John's `everymind_cleaning` package is
+the primary workflow, with the local Presidio engine connected through its batch
+adapter. The original integration kept its language heuristic; the later Lingua
+update is described below. Presidio rules and allowlists remain unchanged, and
+no translation or provider call is enabled. These are local review results.
 
 ## Language routing verification (`language-fix`)
 
@@ -183,7 +184,7 @@ and rollback across folders on a late publication failure. All 51 notebook code
 cells parse, saved outputs are empty, and the existing analysis cells remain
 unchanged. The optional analysis notebook was not executed.
 
-## Main merge and censored-CSV analysis (current)
+## Main merge and censored-CSV analysis (before the language merge)
 
 Merged `origin/main` at `1a71d0e` into `security-check` with merge checkpoint
 `8f6cfaf`; integration checkpoint `26267a8` connects its analysis to the censored
@@ -243,3 +244,33 @@ manifest and analysis dataset hash were restored. All real-data checks then
 passed again. Concurrent experiments should use their own `--output-dir` so
 they do not replace the primary run. The reader correctly rejects mismatched
 files instead of silently analyzing them.
+
+## Language fix merged into security-check (current)
+
+Merge checkpoint `cde1add` incorporates `language-fix` at `dba48fd` while retaining
+our latest analysis verification and parallel-output guidance. Neither main nor
+the language-fix branch was modified. The merged code passed **106 tests and 67
+subtests** with DNS/socket access blocked throughout; `pip check` also passed.
+
+A fresh CPU run with network, downloads and GPU activation blocked retained
+1,299 records and the 51/77-column stage schemas. Its censored CSV exactly matches
+the language branch's reviewed candidate. All shared structured values, original
+form-language answers, raw sources, cleaned data and private-original linkage
+are unchanged. The calling-likelihood scores still include all four valid zeros.
+All six audiences retain identical quantitative evidence.
+
+Of 1,714 nonblank comments, 1,612 route from text and 102 use a flagged form-language
+fallback; 884 blanks bypass Presidio. Three effective language choices changed,
+with two resulting text replacements changed. Unchanged routes retain identical
+detections and replacements. Changed comments remain 76 and detections remain 83;
+these totals are not accuracy measurements. Inspection of the three changed
+routes confirms two Spanish corrections and one Spanish response incorrectly
+falling back to English at a 0.672 score, below the 0.80 threshold. That case is
+explicitly flagged; threshold tuning and mixed-language handling remain future work.
+
+The active analysis JSON, all 1,714 pending censored-text review records, and the
+Gemini prompt dry run were refreshed without provider calls. All 65 pre-merge
+private artifacts remain available with matching hashes; the 15 active stage,
+analysis and review files were archived under `archive/pre_language_fix/` before
+replacement. Data remains Git-ignored. The current verification report is
+`private_data/reports/72b08ff71ede/language_merge_verification.json`.
